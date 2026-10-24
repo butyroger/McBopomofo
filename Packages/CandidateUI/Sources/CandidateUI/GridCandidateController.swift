@@ -237,12 +237,14 @@ public class GridCandidateController: CandidateController {
         delegate?.candidateCountForController(self) ?? 0
     }
 
-    /// At least 12 columns to keep the grid compact. The key labels apply to
-    /// the first columns.
+    /// Each section takes one row, so the grid is as wide as the longest
+    /// section, with at least this many columns. The key labels apply to the
+    /// first columns.
     @objc public var minimumColumnCount: Int = 12
 
     private var columnCount: UInt {
-        UInt(max(keyLabels.count, minimumColumnCount, 1))
+        let longest = rows.map { $0.count }.max() ?? 0
+        return max(longest, UInt(max(keyLabels.count, minimumColumnCount, 1)))
     }
 
     private func buildRows() {
@@ -254,14 +256,7 @@ public class GridCandidateController: CandidateController {
         }
         var start: UInt = 0
         for (title, count) in groups where count > 0 {
-            var offset: UInt = 0
-            while offset < count {
-                let rowCount = min(columnCount, count - offset)
-                rows.append(
-                    GridRow(title: offset == 0 ? title : nil, start: start + offset, count: rowCount)
-                )
-                offset += rowCount
-            }
+            rows.append(GridRow(title: title, start: start, count: count))
             start += count
         }
     }
