@@ -175,6 +175,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NonModalAlertWindowControlle
         LanguageModelManager.loadUserPhrases(
             enableForPlainBopomofo: Preferences.enableUserPhrasesInPlainBopomofo)
         LanguageModelManager.loadUserPhraseReplacement()
+        // The user phrase folder may have changed.
+        LanguageModelManager.reloadUserOverrideModel()
 
         fsStreamHelper?.delegate = nil
         fsStreamHelper?.stop()
@@ -313,6 +315,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NonModalAlertWindowControlle
 
 extension AppDelegate: FSEventStreamHelperDelegate {
     func helper(_ helper: FSEventStreamHelper, didReceive events: [FSEventStreamHelper.Event]) {
+        let learningFolder = (LanguageModelManager.userOverrideModelFolderPath as NSString)
+            .resolvingSymlinksInPath
+        let isLearningFolder: (FSEventStreamHelper.Event) -> Bool = {
+            ($0.path as NSString).resolvingSymlinksInPath.hasPrefix(learningFolder)
+        }
+        if events.contains(where: isLearningFolder) {
+            DispatchQueue.main.async {
+                LanguageModelManager.reloadUserOverrideModel()
+            }
+        }
+        // Saving the user override model happens all the time, and it
+        // should not trigger reloading the user phrases.
+        if events.allSatisfy(isLearningFolder) {
+            return
+        }
         DispatchQueue.main.async {
             LanguageModelManager.loadUserPhrases(
                 enableForPlainBopomofo: Preferences.enableUserPhrasesInPlainBopomofo)

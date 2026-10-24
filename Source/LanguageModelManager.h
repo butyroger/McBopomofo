@@ -40,7 +40,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (nullable NSString *)readingFor:(NSString *)phrase;
 
+/// Rebuilds the user override model from this device and the files saved by
+/// the other devices sharing the user phrase folder.
++ (void)reloadUserOverrideModel;
+
 @property (class, readonly, nonatomic) NSString *dataFolderPath;
+@property (class, readonly, nonatomic) NSString *userOverrideModelFolderPath;
 @property (class, readonly, nonatomic) NSString *userPhrasesDataPathMcBopomofo;
 @property (class, readonly, nonatomic) NSString *userPhrasesDataPathPlainBopomofo;
 @property (class, readonly, nonatomic) NSString *excludedPhrasesDataPathMcBopomofo;

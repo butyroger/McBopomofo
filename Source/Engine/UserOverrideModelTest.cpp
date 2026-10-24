@@ -208,6 +208,33 @@ TEST(UserOverrideModelTest, DeserializeSkipsMalformedLines) {
   ASSERT_TRUE(s.forceHighScoreOverride);
 }
 
+TEST(UserOverrideModelTest, DeserializeAppendMergesCounts) {
+  UserOverrideModel deviceA(kCapacity, kHalflife);
+  deviceA.observe("a", "1", kFakeNow);
+  deviceA.observe("a", "1", kFakeNow + 1);
+  deviceA.observe("b", "2", kFakeNow + 2);
+
+  UserOverrideModel deviceB(kCapacity, kHalflife);
+  deviceB.observe("a", "1", kFakeNow + 3);
+  deviceB.observe("a", "9", kFakeNow + 4);
+  deviceB.observe("c", "3", kFakeNow + 5);
+
+  UserOverrideModel merged(kCapacity, kHalflife);
+  merged.deserialize(deviceA.serialize());
+  merged.deserialize(deviceB.serialize(), true);
+
+  ASSERT_EQ(merged.candidateObservationCount("1"), 3);
+  ASSERT_EQ(merged.candidateObservationCount("9"), 1);
+  // "1" was picked 3 out of 4 times for "a".
+  ASSERT_EQ(merged.suggest("a", kFakeNow + 4).candidate, "1");
+  ASSERT_EQ(merged.suggest("b", kFakeNow + 4).candidate, "2");
+  ASSERT_EQ(merged.suggest("c", kFakeNow + 5).candidate, "3");
+
+  // Without append, the existing observations are replaced.
+  merged.deserialize(deviceB.serialize());
+  ASSERT_TRUE(merged.suggest("b", kFakeNow + 4).empty());
+}
+
 TEST(UserOverrideModelTest, DeserializeRespectsCapacity) {
   UserOverrideModel uom(2, kHalflife);
   ASSERT_EQ(uom.deserialize("a\t1\t1\t1657772432\t0\n"

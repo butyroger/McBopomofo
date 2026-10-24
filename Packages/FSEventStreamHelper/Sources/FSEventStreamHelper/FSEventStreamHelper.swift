@@ -30,9 +30,9 @@ public protocol FSEventStreamHelperDelegate: AnyObject {
 public class FSEventStreamHelper : NSObject {
 
     public struct Event {
-        var path: String
-        var flags: FSEventStreamEventFlags
-        var id: FSEventStreamEventId
+        public var path: String
+        public var flags: FSEventStreamEventFlags
+        public var id: FSEventStreamEventId
     }
 
     public let path: String

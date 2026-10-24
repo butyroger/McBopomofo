@@ -193,8 +193,7 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
     }
     Formosa::Gramambular2::ReadingGrid::NodePtr currentNode = *nodeIter;
     if (currentNode != nullptr && currentNode->currentUnigram().score() > -8) {
-        _userOverrideModel->observe(prevWalk, _latestWalk, self.actualCandidateCursorIndex, [NSDate date].timeIntervalSince1970);
-        [LanguageModelManager saveUserOverrideModel];
+        [LanguageModelManager observeUserOverrideWithWalkBefore:prevWalk walkAfter:_latestWalk cursor:self.actualCandidateCursorIndex];
         [self _learnPhraseIfFrequentlyChosen:currentNode];
     }
 

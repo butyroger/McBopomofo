@@ -247,9 +247,11 @@ std::string UserOverrideModel::serialize() const {
   return out.str();
 }
 
-size_t UserOverrideModel::deserialize(const std::string& text) {
-  lruList_.clear();
-  lruMap_.clear();
+size_t UserOverrideModel::deserialize(const std::string& text, bool append) {
+  if (!append) {
+    lruList_.clear();
+    lruMap_.clear();
+  }
 
   size_t loaded = 0;
   std::istringstream in(text);

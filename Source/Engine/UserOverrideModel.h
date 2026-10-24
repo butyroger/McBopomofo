@@ -72,9 +72,12 @@ class UserOverrideModel {
   // key<TAB>candidate<TAB>count<TAB>timestamp<TAB>forceHighScoreOverride
   [[nodiscard]] std::string serialize() const;
 
-  // Replaces all observations with the ones in the serialized text. Malformed
-  // lines are skipped. Returns the number of loaded overrides.
-  size_t deserialize(const std::string& text);
+  // Loads the observations in the serialized text. Unless append is true, all
+  // existing observations are removed first. When appending, the counts of
+  // the same key and candidate are added up, which is how the observations
+  // from different devices are merged. Malformed lines are skipped. Returns
+  // the number of loaded overrides.
+  size_t deserialize(const std::string& text, bool append = false);
 
  private:
   struct Override {

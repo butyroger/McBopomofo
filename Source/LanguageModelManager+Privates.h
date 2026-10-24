@@ -35,7 +35,11 @@ NS_ASSUME_NONNULL_BEGIN
 @property (class, readonly, nonatomic) McBopomofo::VariantAnnotator *variantAnnotator;
 @property (class, readonly, nonatomic) NSString *userOverrideModelDataPath;
 
-/// Persists the user override model to the user data folder.
+/// Records a user override in the models of this device and of all devices,
+/// and saves the former shortly after.
++ (void)observeUserOverrideWithWalkBefore:(const Formosa::Gramambular2::ReadingGrid::WalkResult &)walkBefore walkAfter:(const Formosa::Gramambular2::ReadingGrid::WalkResult &)walkAfter cursor:(size_t)cursor;
+
+/// Persists the user override model of this device to the user data folder.
 + (void)saveUserOverrideModel;
 
 /// Writes a phrase learned from the user's candidate selections. Unlike

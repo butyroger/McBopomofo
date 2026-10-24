@@ -29,13 +29,20 @@
 #include "AssociatedPhrasesV2.h"
 
 @import OpenCCBridge;
+@import SystemConfiguration;
 
 static const int kUserOverrideModelCapacity = 5000;
+static const int kMergedUserOverrideModelCapacity = 20000;
+static const double kUserOverrideModelSaveDelay = 2.0;
 static const double kObservedOverrideHalflife = 30.0 * 86400.0; // 30 days.
 
 static McBopomofo::McBopomofoLM gLanguageModelMcBopomofo;
 static McBopomofo::McBopomofoLM gLanguageModelPlainBopomofo;
-static McBopomofo::UserOverrideModel gUserOverrideModel(kUserOverrideModelCapacity, kObservedOverrideHalflife);
+// What the user picked on this device. This is what gets saved.
+static McBopomofo::UserOverrideModel gLocalUserOverrideModel(kUserOverrideModelCapacity, kObservedOverrideHalflife);
+// gLocalUserOverrideModel plus what the user picked on other devices sharing
+// the same user phrase folder. This is what the suggestions come from.
+static McBopomofo::UserOverrideModel gUserOverrideModel(kMergedUserOverrideModelCapacity, kObservedOverrideHalflife);
 static McBopomofo::VariantAnnotator gVariantAnnotator;
 
 static NSString *const kUserDataTemplateName = @"template-data";
@@ -44,8 +51,8 @@ static NSString *const kExcludedPhrasesMcBopomofoTemplateName = @"template-exclu
 static NSString *const kExcludedPhrasesPlainBopomofoTemplateName = @"template-exclude-phrases-plain-bpmf";
 static NSString *const kPhraseReplacementTemplateName = @"template-phrases-replacement";
 static NSString *const kTemplateExtension = @".txt";
-static NSString *const kUserOverrideModelFolderName = @"McBopomofo-Learning";
-static NSString *const kUserOverrideModelFilename = @"user-override-model.txt";
+static NSString *const kUserOverrideModelFolderName = @"learning";
+static NSString *const kUserOverrideModelDeviceIDKey = @"UserOverrideModelDeviceID";
 
 @implementation LanguageModelManager
 
@@ -481,22 +488,40 @@ static void LTLoadVariantAnnotatorData()
     return &gLanguageModelPlainBopomofo;
 }
 
-+ (McBopomofo::UserOverrideModel *)userOverrideModel
+// The model is shared among the devices using the same user phrase folder
+// (for example, on iCloud Drive). Each device writes its own file, named
+// "<device ID>-<computer name>.txt", and reads the files of the others, so
+// that the devices never overwrite each other.
++ (NSString *)userOverrideModelFolderPath
 {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        [self _loadUserOverrideModel];
-    });
-    return &gUserOverrideModel;
+    return [[self dataFolderPath] stringByAppendingPathComponent:kUserOverrideModelFolderName];
 }
 
-// The model is saved after every candidate selection, so it lives outside the
-// user phrase folder, where any change triggers a reload of the user phrases.
++ (NSString *)_userOverrideModelDeviceID
+{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *deviceID = [defaults stringForKey:kUserOverrideModelDeviceIDKey];
+    if (deviceID.length == 0) {
+        deviceID = [[NSUUID UUID].UUIDString substringToIndex:8];
+        [defaults setObject:deviceID forKey:kUserOverrideModelDeviceIDKey];
+    }
+    return deviceID;
+}
+
 + (NSString *)userOverrideModelDataPath
 {
-    NSString *appSupportPath = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES).firstObject;
-    NSString *folderPath = [appSupportPath stringByAppendingPathComponent:kUserOverrideModelFolderName];
-    return [folderPath stringByAppendingPathComponent:kUserOverrideModelFilename];
+    static NSString *filename;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSString *name = CFBridgingRelease(SCDynamicStoreCopyComputerName(NULL, NULL));
+        if (name.length == 0) {
+            name = @"Mac";
+        }
+        NSCharacterSet *invalid = [NSCharacterSet characterSetWithCharactersInString:@"/:\\\n\r\t"];
+        name = [[name componentsSeparatedByCharactersInSet:invalid] componentsJoinedByString:@"_"];
+        filename = [NSString stringWithFormat:@"%@-%@.txt", [self _userOverrideModelDeviceID], name];
+    });
+    return [[self userOverrideModelFolderPath] stringByAppendingPathComponent:filename];
 }
 
 + (dispatch_queue_t)_userOverrideModelIOQueue
@@ -509,26 +534,141 @@ static void LTLoadVariantAnnotatorData()
     return queue;
 }
 
-+ (void)_loadUserOverrideModel
+static NSString *LTReadUserOverrideModelFile(NSString *path)
 {
-    NSString *path = [self userOverrideModelDataPath];
-    if (![[NSFileManager defaultManager] fileExistsAtPath:path]) {
-        return;
-    }
     NSError *error = nil;
     NSString *content = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
     if (content == nil) {
         NSLog(@"Failed to read user override model at %@: %@", path, error);
+    }
+    return content;
+}
+
++ (McBopomofo::UserOverrideModel *)userOverrideModel
+{
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        [self reloadUserOverrideModel];
+    });
+    return &gUserOverrideModel;
+}
+
+// iCloud Drive may evict a file and leave a ".<name>.icloud" placeholder.
+static NSString *LTICloudPlaceholderPath(NSString *path)
+{
+    NSString *placeholder = [NSString stringWithFormat:@".%@.icloud", path.lastPathComponent];
+    return [[path stringByDeletingLastPathComponent] stringByAppendingPathComponent:placeholder];
+}
+
+static void LTDownloadICloudPlaceholder(NSString *path)
+{
+    NSError *error = nil;
+    if (![[NSFileManager defaultManager] startDownloadingUbiquitousItemAtURL:[NSURL fileURLWithPath:path] error:&error]) {
+        NSLog(@"Failed to download %@: %@", path, error);
+    }
+}
+
+// Whether the saved model of this device is yet to be merged into
+// gLocalUserOverrideModel, e.g. when it is still being downloaded.
+static BOOL gLocalUserOverrideModelFilePending = YES;
+
++ (void)_loadLocalUserOverrideModelIfNeeded
+{
+    if (!gLocalUserOverrideModelFilePending) {
         return;
     }
-    gUserOverrideModel.deserialize(content.UTF8String);
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSString *folderPath = [self userOverrideModelFolderPath];
+    NSString *path = [self userOverrideModelDataPath];
+
+    // The computer may have been renamed since the file was written.
+    NSString *prefix = [[self _userOverrideModelDeviceID] stringByAppendingString:@"-"];
+    for (NSString *filename in [fileManager contentsOfDirectoryAtPath:folderPath error:nil]) {
+        NSString *existingPath = [folderPath stringByAppendingPathComponent:filename];
+        if ([filename hasPrefix:prefix] && [filename.pathExtension isEqualToString:@"txt"] && ![existingPath isEqualToString:path]) {
+            [fileManager moveItemAtPath:existingPath toPath:path error:nil];
+            break;
+        }
+    }
+
+    if ([fileManager fileExistsAtPath:path]) {
+        NSString *content = LTReadUserOverrideModelFile(path);
+        if (content != nil) {
+            // Appending keeps what has been observed while the file was not
+            // available yet.
+            gLocalUserOverrideModel.deserialize(content.UTF8String, true);
+            gLocalUserOverrideModelFilePending = NO;
+        }
+        return;
+    }
+
+    if ([fileManager fileExistsAtPath:LTICloudPlaceholderPath(path)]) {
+        // Try again when the download finishes and the folder changes.
+        LTDownloadICloudPlaceholder(path);
+        return;
+    }
+    gLocalUserOverrideModelFilePending = NO;
+}
+
++ (void)reloadUserOverrideModel
+{
+    [self _loadLocalUserOverrideModelIfNeeded];
+    gUserOverrideModel.deserialize(gLocalUserOverrideModel.serialize());
+
+    NSString *folderPath = [self userOverrideModelFolderPath];
+    NSString *localFilename = [[self userOverrideModelDataPath] lastPathComponent];
+    NSArray *filenames = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:folderPath error:nil];
+    for (NSString *filename in [filenames sortedArrayUsingSelector:@selector(compare:)]) {
+        if ([filename hasPrefix:@"."] && [filename.pathExtension isEqualToString:@"icloud"]) {
+            NSString *original = [[filename substringFromIndex:1] stringByDeletingPathExtension];
+            LTDownloadICloudPlaceholder([folderPath stringByAppendingPathComponent:original]);
+            continue;
+        }
+        if (![filename.pathExtension isEqualToString:@"txt"] || [filename isEqualToString:localFilename]) {
+            continue;
+        }
+        NSString *content = LTReadUserOverrideModelFile([folderPath stringByAppendingPathComponent:filename]);
+        if (content != nil) {
+            gUserOverrideModel.deserialize(content.UTF8String, true);
+        }
+    }
+}
+
++ (void)observeUserOverrideWithWalkBefore:(const Formosa::Gramambular2::ReadingGrid::WalkResult &)walkBefore walkAfter:(const Formosa::Gramambular2::ReadingGrid::WalkResult &)walkAfter cursor:(size_t)cursor
+{
+    [self userOverrideModel];
+    double timestamp = [NSDate date].timeIntervalSince1970;
+    gLocalUserOverrideModel.observe(walkBefore, walkAfter, cursor, timestamp);
+    gUserOverrideModel.observe(walkBefore, walkAfter, cursor, timestamp);
+    [self _scheduleSavingUserOverrideModel];
+}
+
+// Coalesces consecutive selections into one save, so that a synced folder is
+// not flooded with uploads.
++ (void)_scheduleSavingUserOverrideModel
+{
+    static NSUInteger generation = 0;
+    NSUInteger currentGeneration = ++generation;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kUserOverrideModelSaveDelay * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if (currentGeneration == generation) {
+            [self saveUserOverrideModel];
+        }
+    });
 }
 
 + (void)saveUserOverrideModel
 {
+    // Never overwrite the saved model before it has been loaded.
+    [self _loadLocalUserOverrideModelIfNeeded];
+    if (gLocalUserOverrideModelFilePending) {
+        [self _scheduleSavingUserOverrideModel];
+        return;
+    }
+
     // Serialize on the caller's thread, which owns the model, and leave the
     // file I/O to a serial queue so that typing is never blocked.
-    std::string serialized = gUserOverrideModel.serialize();
+    std::string serialized = gLocalUserOverrideModel.serialize();
     NSData *data = [NSData dataWithBytes:serialized.data() length:serialized.size()];
     NSString *path = [self userOverrideModelDataPath];
     dispatch_async([self _userOverrideModelIOQueue], ^{
