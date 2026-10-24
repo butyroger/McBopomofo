@@ -58,7 +58,7 @@ TEST(UserOverrideModelTest, BasicOperation) {
   ASSERT_TRUE(v.empty());
 }
 
-TEST(UserOverrideModelTest, FreshVsFrequent) {
+TEST(UserOverrideModelTest, NewestChoiceWins) {
   UserOverrideModel uom(kCapacity, kHalflife);
   std::string key = "abc";
   std::string olderValue = "older";
@@ -67,30 +67,26 @@ TEST(UserOverrideModelTest, FreshVsFrequent) {
   uom.observe(key, olderValue, kFakeNow);
   uom.observe(key, olderValue, kFakeNow + kHalflife * 1);
   uom.observe(key, olderValue, kFakeNow + kHalflife * 2);
-  uom.observe(key, olderValue, kFakeNow + kHalflife * 3);
-  uom.observe(key, olderValue, kFakeNow + kHalflife * 4);
-  uom.observe(key, newerValue, kFakeNow + kHalflife * 5);
-  uom.observe(key, newerValue, kFakeNow + kHalflife * 5.25);
 
-  // Even if newerValue is more recent, olderValue is used more frequently,
-  // and so initially olderValue is still suggested.
-  auto v = uom.suggest(key, kFakeNow + kHalflife * 7);
-  ASSERT_EQ(v.candidate, olderValue);
-  v = uom.suggest(key, kFakeNow + kHalflife * 20);
-  ASSERT_EQ(v.candidate, olderValue);
-  v = uom.suggest(key, kFakeNow + kHalflife * 22);
+  auto v = uom.suggest(key, kFakeNow + kHalflife * 3);
   ASSERT_EQ(v.candidate, olderValue);
 
-  // At this point, even if olderValue hasn't expired yet, but the
-  // less-frequently observed newerValue is fresher.
-  uom.observe(key, newerValue, kFakeNow + kHalflife * 23);
-  v = uom.suggest(key, kFakeNow + kHalflife * 23.5);
+  // Even if olderValue is used more frequently, choosing newerValue once
+  // corrects the suggestion.
+  uom.observe(key, newerValue, kFakeNow + kHalflife * 4);
+  v = uom.suggest(key, kFakeNow + kHalflife * 4);
   ASSERT_EQ(v.candidate, newerValue);
+
+  // And choosing olderValue again switches it back.
+  uom.observe(key, olderValue, kFakeNow + kHalflife * 5);
+  v = uom.suggest(key, kFakeNow + kHalflife * 5);
+  ASSERT_EQ(v.candidate, olderValue);
 
   v = uom.suggest(key, kFakeNow + kHalflife * 25);
-  ASSERT_EQ(v.candidate, newerValue);
+  ASSERT_EQ(v.candidate, olderValue);
 
-  v = uom.suggest(key, kFakeNow + kHalflife * 45);
+  // Everything has decayed.
+  v = uom.suggest(key, kFakeNow + kHalflife * 26);
   ASSERT_TRUE(v.empty());
 }
 
@@ -225,8 +221,8 @@ TEST(UserOverrideModelTest, DeserializeAppendMergesCounts) {
 
   ASSERT_EQ(merged.candidateObservationCount("1"), 3);
   ASSERT_EQ(merged.candidateObservationCount("9"), 1);
-  // "1" was picked 3 out of 4 times for "a".
-  ASSERT_EQ(merged.suggest("a", kFakeNow + 4).candidate, "1");
+  // "1" was picked 3 times for "a", but the latest choice on any device wins.
+  ASSERT_EQ(merged.suggest("a", kFakeNow + 4).candidate, "9");
   ASSERT_EQ(merged.suggest("b", kFakeNow + 4).candidate, "2");
   ASSERT_EQ(merged.suggest("c", kFakeNow + 5).candidate, "3");
 

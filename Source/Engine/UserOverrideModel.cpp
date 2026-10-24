@@ -200,9 +200,12 @@ UserOverrideModel::Suggestion UserOverrideModel::suggest(const std::string& key,
   auto& keyValuePair = *listIter;
   const Observation& observation = keyValuePair.second;
 
+  // The most recent choice wins, so that the user can always correct a
+  // wrong choice by simply choosing again. The score is only used to tell if
+  // a choice has decayed.
   std::string candidate;
   bool forceHighScoreOverride = false;
-  double score = 0;
+  double latestTimestamp = 0;
   for (auto i = observation.overrides.begin(); i != observation.overrides.end();
        ++i) {
     const Override& o = i->second;
@@ -212,10 +215,10 @@ UserOverrideModel::Suggestion UserOverrideModel::suggest(const std::string& key,
       continue;
     }
 
-    if (overrideScore > score) {
+    if (candidate.empty() || o.timestamp > latestTimestamp) {
       candidate = i->first;
       forceHighScoreOverride = o.forceHighScoreOverride;
-      score = overrideScore;
+      latestTimestamp = o.timestamp;
     }
   }
   return UserOverrideModel::Suggestion{candidate, forceHighScoreOverride};

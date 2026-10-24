@@ -42,8 +42,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// Persists the user override model of this device to the user data folder.
 + (void)saveUserOverrideModel;
 
-/// Writes a phrase learned from the user's candidate selections. Unlike
-/// writeUserPhrase:, a phrase that the user has excluded is never written.
+/// Writes a phrase learned from the user's candidate selections, before the
+/// other user phrases of the same reading. Unlike writeUserPhrase:, a phrase
+/// that the user has excluded is never written. Returns NO if nothing changed.
 + (BOOL)learnUserPhrase:(NSString *)userPhrase;
 @end
 

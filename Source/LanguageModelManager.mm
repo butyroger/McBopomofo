@@ -416,11 +416,55 @@ static void LTLoadVariantAnnotatorData()
         return NO;
     }
 
-    NSString *includePath = [self userPhrasesDataPathMcBopomofo];
-    if ([self _checkIfPhrase:userPhrase existAtPath:includePath]) {
+    NSArray *components = [userPhrase componentsSeparatedByString:@" "];
+    if (components.count != 2) {
         return NO;
     }
-    return [self _writePhrase:userPhrase atEndOfPath:includePath];
+    NSString *phrase = components[0];
+    NSString *reading = components[1];
+
+    NSString *path = [self userPhrasesDataPathMcBopomofo];
+    NSError *error = nil;
+    NSString *content = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
+    if (content == nil) {
+        return NO;
+    }
+
+    // Among the user phrases of the same reading, the earlier one wins. So the
+    // learned phrase goes before the others, and the latest choice prevails.
+    NSMutableArray<NSString *> *lines = [[content componentsSeparatedByString:@"\n"] mutableCopy];
+    NSUInteger firstIndexOfReading = NSNotFound;
+    NSMutableIndexSet *phraseIndexes = [NSMutableIndexSet indexSet];
+    for (NSUInteger i = 0; i < lines.count; i++) {
+        NSString *trimmed = [lines[i] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        NSArray *lineComponents = [trimmed componentsSeparatedByString:@" "];
+        if ([trimmed hasPrefix:@"#"] || lineComponents.count != 2 || ![lineComponents[1] isEqualToString:reading]) {
+            continue;
+        }
+        if (firstIndexOfReading == NSNotFound) {
+            firstIndexOfReading = i;
+        }
+        if ([lineComponents[0] isEqualToString:phrase]) {
+            [phraseIndexes addIndex:i];
+        }
+    }
+
+    if (firstIndexOfReading == NSNotFound) {
+        return [self _writePhrase:userPhrase atEndOfPath:path];
+    }
+    if ([phraseIndexes containsIndex:firstIndexOfReading]) {
+        // Already the first one.
+        return NO;
+    }
+
+    [lines removeObjectsAtIndexes:phraseIndexes];
+    [lines insertObject:userPhrase atIndex:firstIndexOfReading];
+    NSString *newContent = [lines componentsJoinedByString:@"\n"];
+    if (![newContent writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
+        NSLog(@"Failed to write %@: %@", path, error);
+        return NO;
+    }
+    return YES;
 }
 
 + (BOOL)removeUserPhrase:(NSString *)userPhrase

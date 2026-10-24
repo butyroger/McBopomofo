@@ -114,6 +114,28 @@ TEST(McBopomofoLMTest, UserPhrases) {
   EXPECT_EQ(unigrams[0].value(), "茗");
 }
 
+TEST(McBopomofoLMTest, EarlierUserPhraseComesFirst) {
+  McBopomofoLM lm;
+  auto db = std::make_unique<ParselessPhraseDB>(kPrimaryLMData,
+                                                sizeof(kPrimaryLMData));
+  lm.loadLanguageModel(std::move(db));
+
+  // Learning a phrase moves it before the other user phrases of the same
+  // reading, and this relies on the earlier one coming first.
+  constexpr char kData[] = "移動 ㄧˊ-ㄉㄨㄥˋ\n一動 ㄧˊ-ㄉㄨㄥˋ\n";
+  lm.loadUserPhrases(kData, sizeof(kData));
+  auto unigrams = lm.getUnigrams("ㄧˊ-ㄉㄨㄥˋ");
+  ASSERT_GE(unigrams.size(), 2);
+  EXPECT_EQ(unigrams[0].value(), "移動");
+  EXPECT_EQ(unigrams[1].value(), "一動");
+
+  constexpr char kReordered[] = "一動 ㄧˊ-ㄉㄨㄥˋ\n移動 ㄧˊ-ㄉㄨㄥˋ\n";
+  lm.loadUserPhrases(kReordered, sizeof(kReordered));
+  unigrams = lm.getUnigrams("ㄧˊ-ㄉㄨㄥˋ");
+  ASSERT_GE(unigrams.size(), 2);
+  EXPECT_EQ(unigrams[0].value(), "一動");
+}
+
 TEST(McBopomofoLMTest, ExcludedPhrases) {
   McBopomofoLM lm;
   auto db = std::make_unique<ParselessPhraseDB>(kPrimaryLMData,

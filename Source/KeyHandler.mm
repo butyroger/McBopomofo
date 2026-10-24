@@ -206,7 +206,7 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
 
 // Turns a multi-character phrase into a user phrase once the user has picked
 // it this many times, so that it wins without any context from then on.
-static const size_t kLearnPhraseThreshold = 3;
+static const size_t kLearnPhraseThreshold = 2;
 
 - (void)_learnPhraseIfFrequentlyChosen:(const Formosa::Gramambular2::ReadingGrid::NodePtr &)node
 {
