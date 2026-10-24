@@ -15,11 +15,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.1.1</string>
+	<string>3.1.1-learning.1</string>
 	<key>CFBundleSignature</key>
 	<string>BPMF</string>
 	<key>CFBundleVersion</key>
-	<string>2510</string>
+	<string>2510.1</string>
 	<key>ComponentInputModeDict</key>
 	<dict>
 		<key>tsInputModeListKey</key>
@@ -326,9 +326,9 @@
 	<key>TISParticipatesInTouchBar</key>
 	<false/>
 	<key>UpdateInfoEndpoint</key>
-	<string>https://mcbopomofo.openvanilla.org/updates/Info.plist</string>
+	<string>https://raw.githubusercontent.com/butyroger/McBopomofo/smart-learning/updates/Info.plist</string>
 	<key>UpdateInfoSite</key>
-	<string>https://mcbopomofo.openvanilla.org/</string>
+	<string>https://github.com/butyroger/McBopomofo/releases/latest</string>
 	<key>tsInputMethodCharacterRepertoireKey</key>
 	<array>
 		<string>Hant</string>
