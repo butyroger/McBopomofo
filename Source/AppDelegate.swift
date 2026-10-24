@@ -383,14 +383,8 @@ extension AppDelegate {
     }
 
     @objc func openTextTemplates(_ sender: Any?) {
-        let path = LanguageModelManager.textTemplatesDataPath
-        if !FileManager.default.fileExists(atPath: path) {
-            let header = NSLocalizedString(
-                "# Text templates. Each line is a code, a tab, and the text. Write \\n for a line break.\n# Press ` and type the code to insert the text.\n",
-                comment: "")
-            try? header.write(toFile: path, atomically: true, encoding: .utf8)
-        }
-        open(userFileAt: path)
+        InputState.TextTemplate.createSampleFileIfNeeded()
+        open(userFileAt: LanguageModelManager.textTemplatesDataPath)
     }
 
     @objc func openSymbolTable(_ sender: Any?) {

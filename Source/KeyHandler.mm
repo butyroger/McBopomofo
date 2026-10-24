@@ -919,7 +919,8 @@ static const size_t kLearnPhraseThreshold = 2;
             errorCallback();
             return YES;
         }
-        if (_inputMode == InputModeBopomofo && InputStateTextTemplate.hasTemplates) {
+        if (_inputMode == InputModeBopomofo) {
+            [InputStateTextTemplate createSampleFileIfNeeded];
             if ([state isKindOfClass:[InputStateInputting class]]) {
                 InputStateCommitting *committing = [[InputStateCommitting alloc] initWithPoppedText:((InputStateInputting *)state).composingBuffer];
                 stateCallback(committing);

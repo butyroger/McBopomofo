@@ -328,8 +328,20 @@ class InputState: NSObject {
             entries[index].text
         }
 
-        @objc static var hasTemplates: Bool {
-            !loadEntries().isEmpty
+        /// Creates the template file with some examples if there is none, so
+        /// that the user sees how templates work.
+        @objc static func createSampleFileIfNeeded() {
+            let path = LanguageModelManager.textTemplatesDataPath
+            if FileManager.default.fileExists(atPath: path)
+                || !LanguageModelManager.checkIfUserLanguageModelFilesExist()
+            {
+                return
+            }
+            let sample = NSLocalizedString(
+                "TEXT_TEMPLATES_SAMPLE",
+                value: "# Text templates. Each line is a code, a tab, and the text. Write \\n for a line break.\n# Press ` and type the code, then Enter to insert the text. Press ` again for the symbol table.\n# The following are examples. Edit or remove them as you like.\naddr\t100 Main Street, Springfield\ntel\t+1 555 0100\nem\tname@example.com\nsig\tBest regards,\\nJohn Doe\n",
+                comment: "")
+            try? sample.write(toFile: path, atomically: true, encoding: .utf8)
         }
 
         /// The templates whose code starts with the typed code come first,

@@ -45,6 +45,7 @@ class KeyHandlerInput: NSObject {
     @objc private(set) var charCode: UInt16
     @objc private(set) var keyCode: UInt16
     private var flags: NSEvent.ModifierFlags
+    private var capsLockOn: Bool
     private var cursorForwardKey: KeyCode
     private var cursorBackwardKey: KeyCode
     private var extraChooseCandidateKey: KeyCode
@@ -58,6 +59,7 @@ class KeyHandlerInput: NSObject {
         self.keyCode = keyCode
         self.charCode = charCode
         self.flags = flags
+        capsLockOn = flags.contains([.capsLock])
         useVerticalMode = isVerticalMode
         emacsKey = EmacsKeyHelper.detect(charCode: charCode, flags: flags)
         cursorForwardKey = useVerticalMode ? .down : .right
@@ -73,6 +75,8 @@ class KeyHandlerInput: NSObject {
         inputTextIgnoringModifiers = event.charactersIgnoringModifiers
         keyCode = event.keyCode
         flags = event.modifierFlags
+        capsLockOn = KeyHandlerInput.isCapsLockOn(
+            characters: event.characters, flags: event.modifierFlags)
         useVerticalMode = isVerticalMode
         let charCode: UInt16 = {
             guard let inputText = event.characters, inputText.count > 0 else {
@@ -116,7 +120,27 @@ class KeyHandlerInput: NSObject {
     }
 
     @objc var isCapsLockOn: Bool {
-        flags.contains([.capsLock])
+        capsLockOn
+    }
+
+    /// Tells if Caps Lock is on when a key is pressed.
+    ///
+    /// Right after Caps Lock is toggled, the modifier flags of the next key
+    /// event may still have the old Caps Lock state, while the characters
+    /// already have the new one. Typing fast then gives an uppercase letter
+    /// in the Chinese mode, or an English letter instead of a Bopomofo. So
+    /// for a letter typed without any modifiers, the case of the letter tells
+    /// the actual state.
+    static func isCapsLockOn(characters: String?, flags: NSEvent.ModifierFlags) -> Bool {
+        let modifiers: NSEvent.ModifierFlags = [.shift, .command, .control, .option]
+        if flags.intersection(modifiers).isEmpty,
+            let characters, characters.unicodeScalars.count == 1,
+            let scalar = characters.unicodeScalars.first,
+            scalar.isASCII, CharacterSet.letters.contains(scalar)
+        {
+            return CharacterSet.uppercaseLetters.contains(scalar)
+        }
+        return flags.contains([.capsLock])
     }
 
     @objc var isNumericPad: Bool {

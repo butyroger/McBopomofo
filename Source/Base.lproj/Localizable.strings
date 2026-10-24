@@ -121,7 +121,7 @@
 "Symbols for the Key" = "Symbols for the Key";
 "Edit Text Templates" = "Edit Text Templates";
 "Edit Symbol Table" = "Edit Symbol Table";
-"# Text templates. Each line is a code, a tab, and the text. Write \\n for a line break.\n# Press ` and type the code to insert the text.\n" = "# Text templates. Each line is a code, a tab, and the text. Write \\n for a line break.\n# Press ` and type the code to insert the text.\n";
+"TEXT_TEMPLATES_SAMPLE" = "# Text templates. Each line is a code, a tab, and the text. Write \\n for a line break.\n# Press ` and type the code, then Enter to insert the text. Press ` again for the symbol table.\n# The following are examples. Edit or remove them as you like.\naddr\t100 Main Street, Springfield\ntel\t+1 555 0100\nem\tname@example.com\nsig\tBest regards,\\nJohn Doe\n";
 "# Symbol table. Each line is a category, a tab, and the symbols separated by spaces.\n" = "# Symbol table. Each line is a category, a tab, and the symbols separated by spaces.\n";
 "Text Templates" = "Text Templates";
 "Boost" = "Boost";
