@@ -196,7 +196,11 @@ public class GridCandidateController: CandidateController {
     /// The sections of the candidates. If they do not add up to the number of
     /// candidates, all candidates are shown as one untitled section.
     @objc public var sections: [GridCandidateSection] = []
+    /// The minimum number of rows shown at a time. More are shown if they fit
+    /// in maximumScreenHeightFraction of the screen.
     @objc public var visibleRowCount: Int = 12
+    @objc public var maximumScreenHeightFraction: CGFloat = 0.6
+    private var fittingRowCount: Int = 12
 
     private var candidateView: GridCandidateView
     private var rows: [GridRow] = []
@@ -275,7 +279,12 @@ public class GridCandidateController: CandidateController {
         candidateView.columnCount = 1
         _ = candidateView.layout(
             allTitles: groups.compactMap { $0.0 }, sampleCandidates: samples)
-        let screenWidth = (window?.screen ?? NSScreen.main)?.visibleFrame.width ?? 1440
+        let screenFrame = (window?.screen ?? NSScreen.main)?.visibleFrame
+        let screenWidth = screenFrame?.width ?? 1440
+        let screenHeight = screenFrame?.height ?? 900
+        fittingRowCount = max(
+            visibleRowCount,
+            Int(screenHeight * maximumScreenHeightFraction / max(candidateView.cellHeight, 1)))
         let available = screenWidth * maximumScreenWidthFraction - candidateView.titleWidth
         let fittingColumns = max(Int(available / max(candidateView.cellWidth, 1)), 1)
         let firstSectionColumns = Int(groups.prefix(2).map { $0.1 }.max() ?? 0)
@@ -307,7 +316,7 @@ public class GridCandidateController: CandidateController {
         }
         let highlightedRow = rowIndex(of: candidateView.highlightedIndex) ?? 0
         // Keep the highlighted row visible, scrolling by pages.
-        let visible = max(visibleRowCount, 1)
+        let visible = max(fittingRowCount, 1)
         if highlightedRow < candidateView.firstVisibleRow
             || highlightedRow >= candidateView.firstVisibleRow + visible
         {
@@ -376,13 +385,13 @@ public class GridCandidateController: CandidateController {
 
     override public func showNextPage() -> Bool {
         let rowsLeft = rows.count - 1 - (rowIndex(of: candidateView.highlightedIndex) ?? 0)
-        return moveHighlight(byRows: min(max(visibleRowCount, 1), rowsLeft))
+        return moveHighlight(byRows: min(max(fittingRowCount, 1), rowsLeft))
             || moveHighlight(to: candidateCount - 1)
     }
 
     override public func showPreviousPage() -> Bool {
         let rowsBefore = rowIndex(of: candidateView.highlightedIndex) ?? 0
-        return moveHighlight(byRows: -min(max(visibleRowCount, 1), rowsBefore))
+        return moveHighlight(byRows: -min(max(fittingRowCount, 1), rowsBefore))
     }
 
     override public func highlightNextCandidate() -> Bool {
