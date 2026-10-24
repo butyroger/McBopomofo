@@ -64,7 +64,7 @@ private class GridCandidateView: NSView {
     private(set) var cellWidth: CGFloat = 0
     private(set) var cellHeight: CGFloat = 0
     private(set) var keyLabelHeight: CGFloat = 0
-    private let padding: CGFloat = 6
+    private let padding: CGFloat = 3
 
     override var isFlipped: Bool { true }
 
@@ -80,9 +80,11 @@ private class GridCandidateView: NSView {
         let widest = sampleCandidates.map {
             ($0 as NSString).size(withAttributes: candidateAttrs).width
         }.max() ?? 0
-        cellWidth = ceil(max(widest, candidateFont.pointSize) + padding * 2)
+        cellWidth = ceil(max(widest, candidateFont.pointSize) + padding + 1)
+        // The key labels are drawn small in the corners of the cells, so that
+        // the rows stay compact.
         keyLabelHeight = ceil(keyLabelFont.pointSize * 1.1)
-        cellHeight = ceil(candidateFont.pointSize * 1.3) + keyLabelHeight
+        cellHeight = ceil(candidateFont.pointSize * 1.2)
 
         let width = titleWidth + cellWidth * CGFloat(columnCount)
         let height = cellHeight * CGFloat(max(visibleRowCount, 1))
@@ -118,13 +120,14 @@ private class GridCandidateView: NSView {
                 x: 0, y: cellHeight * CGFloat(rowIndex - firstVisibleRow),
                 width: bounds.width, height: cellHeight)
             if row.title != nil, rowIndex != firstVisibleRow {
-                NSColor.separatorColor.setFill()
+                NSColor.separatorColor.withAlphaComponent(0.5).setFill()
                 NSRect(x: 0, y: rowRect.minY, width: bounds.width, height: 1).fill()
             }
             if let title = row.title {
+                let titleHeight = ceil(titleFont.ascender - titleFont.descender)
                 let titleRect = NSRect(
-                    x: padding, y: rowRect.minY + keyLabelHeight, width: titleWidth - padding,
-                    height: cellHeight - keyLabelHeight)
+                    x: padding, y: rowRect.minY + (cellHeight - titleHeight) / 2,
+                    width: titleWidth - padding, height: titleHeight)
                 (title as NSString).draw(in: titleRect, withAttributes: titleAttrs)
             }
 
@@ -145,13 +148,15 @@ private class GridCandidateView: NSView {
                     if index == highlightedIndex {
                         labelAttrs[.foregroundColor] = NSColor.white
                     }
+                    labelAttrs[.paragraphStyle] = nil
                     let labelRect = NSRect(
-                        x: rect.minX, y: rect.minY, width: rect.width, height: keyLabelHeight)
+                        x: rect.minX + 2, y: rect.minY, width: rect.width, height: keyLabelHeight)
                     (keyLabels[column] as NSString).draw(in: labelRect, withAttributes: labelAttrs)
                 }
+                let textHeight = ceil(candidateFont.ascender - candidateFont.descender)
                 let textRect = NSRect(
-                    x: rect.minX, y: rect.minY + keyLabelHeight, width: rect.width,
-                    height: rect.height - keyLabelHeight)
+                    x: rect.minX, y: rect.minY + (rect.height - textHeight) / 2, width: rect.width,
+                    height: textHeight)
                 (candidates(index) as NSString).draw(in: textRect, withAttributes: attrs)
             }
         }
@@ -191,7 +196,7 @@ public class GridCandidateController: CandidateController {
     /// The sections of the candidates. If they do not add up to the number of
     /// candidates, all candidates are shown as one untitled section.
     @objc public var sections: [GridCandidateSection] = []
-    @objc public var visibleRowCount: Int = 8
+    @objc public var visibleRowCount: Int = 12
 
     private var candidateView: GridCandidateView
     private var rows: [GridRow] = []
@@ -232,8 +237,12 @@ public class GridCandidateController: CandidateController {
         delegate?.candidateCountForController(self) ?? 0
     }
 
+    /// At least 12 columns to keep the grid compact. The key labels apply to
+    /// the first columns.
+    @objc public var minimumColumnCount: Int = 12
+
     private var columnCount: UInt {
-        UInt(max(keyLabels.count, 1))
+        UInt(max(keyLabels.count, minimumColumnCount, 1))
     }
 
     private func buildRows() {
@@ -278,9 +287,14 @@ public class GridCandidateController: CandidateController {
         candidateView.columnCount = Int(columnCount)
         candidateView.visibleRowCount = min(visible, rows.count)
         candidateView.keyLabels = keyLabels.map { $0.displayedText }
-        candidateView.keyLabelFont = keyLabelFont
-        candidateView.candidateFont = candidateFont
-        candidateView.titleFont = .systemFont(ofSize: max(keyLabelFont.pointSize, 12))
+        // Symbols do not need a large font, and a smaller one keeps more of
+        // them in view.
+        let symbolFontSize = min(candidateFont.pointSize, 18)
+        candidateView.candidateFont =
+            NSFont(descriptor: candidateFont.fontDescriptor, size: symbolFontSize)
+            ?? .systemFont(ofSize: symbolFontSize)
+        candidateView.keyLabelFont = .systemFont(ofSize: max(round(symbolFontSize * 0.4), 8))
+        candidateView.titleFont = .systemFont(ofSize: max(round(symbolFontSize * 0.55), 11))
         candidateView.candidates = { [weak self] index in
             guard let self else {
                 return ""
