@@ -15,11 +15,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.1.1-learning.5</string>
+	<string>3.1.1-learning.6</string>
 	<key>CFBundleSignature</key>
 	<string>BPMF</string>
 	<key>CFBundleVersion</key>
-	<string>2510.5</string>
+	<string>2510.6</string>
 	<key>ComponentInputModeDict</key>
 	<dict>
 		<key>tsInputModeListKey</key>
@@ -52,39 +52,10 @@
 				<key>tsInputModeScriptKey</key>
 				<string>smTradChinese</string>
 			</dict>
-			<key>org.openvanilla.inputmethod.McBopomofo.PlainBopomofo</key>
-			<dict>
-				<key>TISDoubleSpaceSubstitution</key>
-				<string>。</string>
-				<key>TISIntendedLanguage</key>
-				<string>zh-Hant</string>
-				<key>tsInputModeAlternateMenuIconFileKey</key>
-				<string>PlainBopomofo.tiff</string>
-				<key>tsInputModeCharacterRepertoireKey</key>
-				<array>
-					<string>Hant</string>
-					<string>Han</string>
-				</array>
-				<key>tsInputModeDefaultStateKey</key>
-				<true/>
-				<key>tsInputModeIsVisibleKey</key>
-				<true/>
-				<key>tsInputModeKeyEquivalentModifiersKey</key>
-				<integer>4608</integer>
-				<key>tsInputModeMenuIconFileKey</key>
-				<string>PlainBopomofo.tiff</string>
-				<key>tsInputModePaletteIconFileKey</key>
-				<string>PlainBopomofo.tiff</string>
-				<key>tsInputModePrimaryInScriptKey</key>
-				<true/>
-				<key>tsInputModeScriptKey</key>
-				<string>smTradChinese</string>
-			</dict>
 		</dict>
 		<key>tsVisibleInputModeOrderedArrayKey</key>
 		<array>
 			<string>org.openvanilla.inputmethod.McBopomofo.Bopomofo</string>
-			<string>org.openvanilla.inputmethod.McBopomofo.PlainBopomofo</string>
 		</array>
 	</dict>
 	<key>InputMethodConnectionName</key>

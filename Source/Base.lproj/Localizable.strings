@@ -265,3 +265,5 @@
 "You can run a script to use git to backup your phrases. The script will run in the folder of your user phrases folder." = "You can run a script to use git to backup your phrases. The script will run in the folder of your user phrases folder.";
 
 "Quick Text Transform" = "Quick Text Transform";
+"Bopomofo - Standard Keyboard" = "Bopomofo - Standard Keyboard";
+"Bopomofo - Hsu Keyboard" = "Bopomofo - Hsu Keyboard";

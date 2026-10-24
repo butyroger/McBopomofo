@@ -71,6 +71,19 @@ class McBopomofoInputMethodController: IMKInputController {
     override func menu() -> NSMenu! {
         let menu = NSMenu(title: "Input Method Menu")
 
+        // Quick switch between the two keyboard layouts in daily use.
+        let quickLayouts: [(KeyboardLayout, String)] = [
+            (.standard, NSLocalizedString("Bopomofo - Standard Keyboard", comment: "")),
+            (.hsu, NSLocalizedString("Bopomofo - Hsu Keyboard", comment: "")),
+        ]
+        for (layout, title) in quickLayouts {
+            let item = menu.addItem(
+                withTitle: title, action: #selector(selectKeyboardLayout(_:)), keyEquivalent: "")
+            item.tag = layout.rawValue
+            item.state = Preferences.keyboardLayout == layout ? .on : .off
+        }
+        menu.addItem(NSMenuItem.separator())
+
         let chineseConversionItem = menu.addItem(
             withTitle: NSLocalizedString("Convert to Simplified Chinese", comment: ""),
             action: #selector(toggleChineseConverter(_:)), keyEquivalent: "g")
@@ -304,6 +317,22 @@ class McBopomofoInputMethodController: IMKInputController {
             message: enabled
                 ? NSLocalizedString("Chinese Conversion On", comment: "")
                 : NSLocalizedString("Chinese Conversion Off", comment: ""))
+        if let currentClient = currentClient {
+            keyHandler.clear()
+            self.handle(state: InputState.Empty(), client: currentClient)
+        }
+    }
+
+    @objc func selectKeyboardLayout(_ sender: Any?) {
+        // The input menu may pass the menu item itself, or a dictionary holding it.
+        let item = (sender as? NSMenuItem)
+            ?? ((sender as? [String: Any])?[kIMKCommandMenuItemName] as? NSMenuItem)
+        guard let item, let layout = KeyboardLayout(rawValue: item.tag) else {
+            return
+        }
+        Preferences.keyboardLayout = layout
+        keyHandler.syncWithPreferences()
+        NotifierController.notify(message: item.title)
         if let currentClient = currentClient {
             keyHandler.clear()
             self.handle(state: InputState.Empty(), client: currentClient)
