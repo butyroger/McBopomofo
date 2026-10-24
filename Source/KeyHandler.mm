@@ -64,6 +64,10 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
     Formosa::Gramambular2::ReadingGrid::WalkResult _latestWalk;
 
     NSString *_inputMode;
+
+    // The punctuation reading replaced by the symbol table, to be restored
+    // when the user cancels.
+    std::string _readingBeforeSymbolTable;
 }
 
 @synthesize delegate = _delegate;
@@ -204,6 +208,107 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
     }
 }
 
+// Inserts a reading whose candidates are symbols at the cursor, and lets the
+// user pick one from the grid of the symbol table.
+- (BOOL)_enterSymbolTableWithKey:(const std::string &)key input:(KeyHandlerInput *)input stateCallback:(void (^)(InputState *))stateCallback
+{
+    if (!_languageModel->hasUnigrams(key)) {
+        return NO;
+    }
+    _readingBeforeSymbolTable.clear();
+    _grid->insertReading(key);
+    [self _walk];
+    size_t originalCursorIndex = _grid->cursor();
+    if (Preferences.selectPhraseAfterCursorAsCandidate) {
+        _grid->setCursor(originalCursorIndex - 1);
+    }
+    InputStateChoosingCandidate *choosingCandidate = [self _buildCandidateStateFromInputtingState:(InputStateInputting *)[self buildInputtingState] useVerticalMode:input.useVerticalMode];
+    InputChoosingPunctuationList *choosingPunctuationList = [[InputChoosingPunctuationList alloc] initWithChoosingCandidate:choosingCandidate];
+    choosingPunctuationList.originalCursorIndex = originalCursorIndex;
+    stateCallback(choosingPunctuationList);
+    return YES;
+}
+
+// If the candidate cursor is at a punctuation, replaces it with the symbol
+// table, with the symbols of the same key first.
+- (BOOL)_expandPunctuationToSymbolTableWithInput:(KeyHandlerInput *)input stateCallback:(void (^)(InputState *))stateCallback
+{
+    size_t endCursor = 0;
+    auto nodeIter = _latestWalk.findNodeAt(self.actualCandidateCursorIndex, &endCursor);
+    if (nodeIter == _latestWalk.nodes.cend()) {
+        return NO;
+    }
+    std::string reading = (*nodeIter)->reading();
+    if ((*nodeIter)->spanningLength() != 1 || reading.rfind("_", 0) != 0 ||
+        reading.find("punctuation_") == std::string::npos ||
+        reading.rfind(McBopomofo::McBopomofoLM::kSymbolsKeyPrefix, 0) == 0 ||
+        reading.rfind(McBopomofo::McBopomofoLM::kPunctuationListKey, 0) == 0) {
+        return NO;
+    }
+    std::string key = std::string(McBopomofo::McBopomofoLM::kSymbolsKeyPrefix) + reading;
+    if (!_languageModel->hasUnigrams(key)) {
+        return NO;
+    }
+
+    _grid->setCursor(endCursor);
+    _grid->deleteReadingBeforeCursor();
+    [self _walk];
+    if (![self _enterSymbolTableWithKey:key input:input stateCallback:stateCallback]) {
+        return NO;
+    }
+    _readingBeforeSymbolTable = reading;
+    return YES;
+}
+
+- (BOOL)_handleTextTemplateState:(InputState *)state
+                           input:(KeyHandlerInput *)input
+                   stateCallback:(void (^)(InputState *))stateCallback
+                   errorCallback:(void (^)(void))errorCallback
+{
+    InputStateTextTemplate *templateState = (InputStateTextTemplate *)state;
+    UniChar charCode = input.charCode;
+    if (charCode == 27) {
+        stateCallback([[InputStateEmpty alloc] init]);
+        return YES;
+    }
+    if ((charCode == 8) || input.isDelete) {
+        NSString *code = templateState.code;
+        if (code.length == 0) {
+            stateCallback([[InputStateEmpty alloc] init]);
+            return YES;
+        }
+        stateCallback([[InputStateTextTemplate alloc] initWithCode:[code substringToIndex:code.length - 1]]);
+        return YES;
+    }
+    // Pressing ` again switches to the symbol table.
+    if ((char)charCode == '`') {
+        [self clear];
+        if (![self _enterSymbolTableWithKey:std::string(McBopomofo::McBopomofoLM::kSymbolsKeyPrefix) input:input stateCallback:stateCallback]) {
+            errorCallback();
+        }
+        return YES;
+    }
+    // Shift + a candidate key selects the candidate.
+    if (input.isShiftHold) {
+        VTCandidateController *gCurrentCandidateController = [self.delegate candidateControllerForKeyHandler:self];
+        for (VTCandidateKeyLabel *label in gCurrentCandidateController.keyLabels) {
+            if ([input.inputTextIgnoringModifiers compare:label.key options:NSCaseInsensitiveSearch] == NSOrderedSame) {
+                return NO;
+            }
+        }
+    }
+    if (charCode < 128 && isprint(charCode) && charCode != ' ') {
+        if (templateState.code.length > 50) {
+            errorCallback();
+            return YES;
+        }
+        NSString *appended = [NSString stringWithFormat:@"%@%c", templateState.code, charCode];
+        stateCallback([[InputStateTextTemplate alloc] initWithCode:appended]);
+        return YES;
+    }
+    return NO;
+}
+
 // Turns a multi-character phrase into a user phrase once the user has picked
 // it this many times, so that it wins without any context from then on.
 static const size_t kLearnPhraseThreshold = 2;
@@ -335,6 +440,7 @@ static const size_t kLearnPhraseThreshold = 2;
 
 - (void)clear
 {
+    _readingBeforeSymbolTable.clear();
     _bpmfReadingBuffer->clear();
     _grid->clear();
     _latestWalk = Formosa::Gramambular2::ReadingGrid::WalkResult {};
@@ -386,6 +492,17 @@ static const size_t kLearnPhraseThreshold = 2;
         if (!result) {
             InputStateNumber *numberState = (InputStateNumber *)state;
             if (!numberState.candidates.count) {
+                return YES;
+            }
+            [self _handleCandidateState:state input:input stateCallback:stateCallback errorCallback:errorCallback];
+        }
+        return YES;
+    }
+
+    if ([state isKindOfClass:[InputStateTextTemplate class]]) {
+        BOOL result = [self _handleTextTemplateState:state input:input stateCallback:stateCallback errorCallback:errorCallback];
+        if (!result) {
+            if (!((InputStateTextTemplate *)state).candidateCount) {
                 return YES;
             }
             [self _handleCandidateState:state input:input stateCallback:stateCallback errorCallback:errorCallback];
@@ -670,6 +787,9 @@ static const size_t kLearnPhraseThreshold = 2;
         if (originalCursorIndex == _grid->length() && Preferences.selectPhraseAfterCursorAsCandidate && Preferences.moveCursorAfterSelectingCandidate) {
             _grid->setCursor(originalCursorIndex - 1);
         }
+        if (_inputMode == InputModeBopomofo && [self _expandPunctuationToSymbolTableWithInput:input stateCallback:stateCallback]) {
+            return YES;
+        }
         InputStateChoosingCandidate *choosingCandidates = [self _buildCandidateStateFromInputtingState:(InputStateInputting *)[self buildInputtingState] useVerticalMode:input.useVerticalMode];
         choosingCandidates.originalCursorIndex = originalCursorIndex;
         stateCallback(choosingCandidates);
@@ -792,23 +912,23 @@ static const size_t kLearnPhraseThreshold = 2;
         return YES;
     }
 
-    // MARK: Punctuation list
+    // MARK: Text templates and symbol table
     if ((char)charCode == '`' && !(input.isControlHold || input.isCommandHold || input.isOptionHold)) {
-        if (_languageModel->hasUnigrams("_punctuation_list")) {
-            if (_bpmfReadingBuffer->isEmpty()) {
-                _grid->insertReading("_punctuation_list");
-                [self _walk];
-                size_t originalCursorIndex = _grid->cursor();
-                if (Preferences.selectPhraseAfterCursorAsCandidate) {
-                    _grid->setCursor(originalCursorIndex - 1);
-                }
-                InputStateChoosingCandidate *choosingCandidate = [self _buildCandidateStateFromInputtingState:(InputStateInputting *)[self buildInputtingState] useVerticalMode:input.useVerticalMode];
-                InputChoosingPunctuationList *choosingPunctuationList = [[InputChoosingPunctuationList alloc] initWithChoosingCandidate:choosingCandidate];
-                choosingPunctuationList.originalCursorIndex = originalCursorIndex;
-                stateCallback(choosingPunctuationList);
-            } else { // If there is still unfinished bpmf reading, ignore the punctuation
-                errorCallback();
+        if (!_bpmfReadingBuffer->isEmpty()) {
+            // If there is still unfinished bpmf reading, ignore the key.
+            errorCallback();
+            return YES;
+        }
+        if (_inputMode == InputModeBopomofo && InputStateTextTemplate.hasTemplates) {
+            if ([state isKindOfClass:[InputStateInputting class]]) {
+                InputStateCommitting *committing = [[InputStateCommitting alloc] initWithPoppedText:((InputStateInputting *)state).composingBuffer];
+                stateCallback(committing);
             }
+            [self clear];
+            stateCallback([[InputStateTextTemplate alloc] initWithCode:@""]);
+            return YES;
+        }
+        if ([self _enterSymbolTableWithKey:std::string(McBopomofo::McBopomofoLM::kSymbolsKeyPrefix) input:input stateCallback:stateCallback]) {
             return YES;
         }
     }
@@ -1480,6 +1600,15 @@ static const size_t kLearnPhraseThreshold = 2;
             } else {
                 _grid->deleteReadingBeforeCursor();
             }
+            _readingBeforeSymbolTable.clear();
+            if (_inputMode != InputModePlainBopomofo) {
+                // Show the symbols of the key, followed by the whole symbol
+                // table.
+                [self _walk];
+                if ([self _enterSymbolTableWithKey:std::string(McBopomofo::McBopomofoLM::kSymbolsKeyPrefix) + key input:input stateCallback:stateCallback]) {
+                    return YES;
+                }
+            }
             _grid->insertReading(key);
             [self _walk];
             if (_inputMode == InputModePlainBopomofo) {
@@ -1711,10 +1840,12 @@ static const size_t kLearnPhraseThreshold = 2;
             InputStateEmptyIgnoringPreviousState *empty = [[InputStateEmptyIgnoringPreviousState alloc] init];
             stateCallback(empty);
         } else if ([state isKindOfClass:[InputChoosingPunctuationList class]]) {
-            if (Preferences.selectPhraseAfterCursorAsCandidate) {
-                _grid->deleteReadingAfterCursor();
-            } else {
-                _grid->deleteReadingBeforeCursor();
+            _grid->setCursor(((InputStateChoosingCandidate *)state).originalCursorIndex);
+            _grid->deleteReadingBeforeCursor();
+            // Put back the punctuation that the symbol table replaced.
+            if (!_readingBeforeSymbolTable.empty()) {
+                _grid->insertReading(_readingBeforeSymbolTable);
+                _readingBeforeSymbolTable.clear();
             }
 
             if (_grid->length() == 0) {
@@ -1749,6 +1880,16 @@ static const size_t kLearnPhraseThreshold = 2;
             stateCallback(committing);
             InputStateEmpty *empty = [[InputStateEmpty alloc] init];
             stateCallback(empty);
+            return YES;
+        }
+
+        if ([state isKindOfClass:[InputStateTextTemplate class]]) {
+            InputStateTextTemplate *templateState = (InputStateTextTemplate *)state;
+            NSUInteger index = gCurrentCandidateController ? gCurrentCandidateController.selectedCandidateIndex : 0;
+            if (index < (NSUInteger)templateState.candidateCount) {
+                stateCallback([[InputStateCommitting alloc] initWithPoppedText:[templateState textAt:index]]);
+            }
+            stateCallback([[InputStateEmpty alloc] init]);
             return YES;
         }
 
@@ -1853,6 +1994,26 @@ static const size_t kLearnPhraseThreshold = 2;
     NSInteger candidateCount = 0;
     if ([state conformsToProtocol:@protocol(CandidateProvider)]) {
         candidateCount = ((id<CandidateProvider>)state).candidateCount;
+    }
+
+    // In a grid, the arrow keys move the highlight in their directions.
+    if ([gCurrentCandidateController isKindOfClass:[VTGridCandidateController class]] &&
+        (input.isLeft || input.isRight || input.isUp || input.isDown)) {
+        VTGridCandidateController *grid = (VTGridCandidateController *)gCurrentCandidateController;
+        BOOL updated = NO;
+        if (input.isLeft) {
+            updated = [grid highlightPreviousCandidate];
+        } else if (input.isRight) {
+            updated = [grid highlightNextCandidate];
+        } else if (input.isUp) {
+            updated = [grid highlightCandidateInPreviousRow];
+        } else {
+            updated = [grid highlightCandidateInNextRow];
+        }
+        if (!updated) {
+            errorCallback();
+        }
+        return YES;
     }
 
 
@@ -1988,7 +2149,8 @@ static const size_t kLearnPhraseThreshold = 2;
     BOOL useInputTextIgnoringModifiers = NO;
     if ([state isKindOfClass:[InputStateAssociatedPhrasesPlain class]] ||
         [state isKindOfClass:[InputStateNumber class]] ||
-        [state isKindOfClass:[InputStateIcuTransform class]]) {
+        [state isKindOfClass:[InputStateIcuTransform class]] ||
+        [state isKindOfClass:[InputStateTextTemplate class]]) {
         useInputTextIgnoringModifiers = YES;
     } else if ([state isKindOfClass:[InputStateAssociatedPhrases class]]) {
         useInputTextIgnoringModifiers = [(InputStateAssociatedPhrases *)state autoTriggered];
@@ -2588,7 +2750,10 @@ static const size_t kLearnPhraseThreshold = 2;
     NSMutableArray *candidatesArray = [[NSMutableArray alloc] init];
     for (const auto& c : candidates) {
         std::string displayText = c.value;
-        if (valueCountMap[displayText] > 1) {
+        // A symbol may appear more than once in the symbol table, and its
+        // reading is not meant to be shown.
+        bool isSymbol = c.reading.rfind("_", 0) == 0;
+        if (valueCountMap[displayText] > 1 && !isSymbol) {
             displayText += " (";
             std::string reading = c.reading;
             std::replace(reading.begin(), reading.end(), '-', ' ');

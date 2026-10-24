@@ -169,6 +169,10 @@ extension McBopomofoInputMethodController: CandidateControllerDelegate {
             let candidate = state.candidate(at: Int(index))
             let committing = InputState.Committing(poppedText: candidate)
             handle(state: committing, client: client)
+        case let state as InputState.TextTemplate:
+            let committing = InputState.Committing(poppedText: state.text(at: Int(index)))
+            handle(state: committing, client: client)
+            handle(state: .Empty(), client: client)
         case let state as InputState.IcuTransform:
             let candidate = state.candidate(at: Int(index))
             let committing = InputState.Committing(poppedText: candidate)

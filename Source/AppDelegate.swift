@@ -381,6 +381,26 @@ extension AppDelegate {
     @objc func openPhraseReplacementMcBopomofo(_ sender: Any?) {
         open(userFileAt: LanguageModelManager.phraseReplacementDataPathMcBopomofo)
     }
+
+    @objc func openTextTemplates(_ sender: Any?) {
+        let path = LanguageModelManager.textTemplatesDataPath
+        if !FileManager.default.fileExists(atPath: path) {
+            let header = NSLocalizedString(
+                "# Text templates. Each line is a code, a tab, and the text. Write \\n for a line break.\n# Press ` and type the code to insert the text.\n",
+                comment: "")
+            try? header.write(toFile: path, atomically: true, encoding: .utf8)
+        }
+        open(userFileAt: path)
+    }
+
+    @objc func openSymbolTable(_ sender: Any?) {
+        let path = LanguageModelManager.symbolTableDataPath
+        if !FileManager.default.fileExists(atPath: path) {
+            try? LanguageModelManager.defaultSymbolTable.write(
+                toFile: path, atomically: true, encoding: .utf8)
+        }
+        open(userFileAt: path)
+    }
 }
 
 extension AppDelegate {

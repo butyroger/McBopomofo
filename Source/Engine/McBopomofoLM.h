@@ -92,6 +92,29 @@ class McBopomofoLM : public Formosa::Gramambular2::LanguageModel {
 
   bool hasUnigrams(const std::string& key) override;
 
+  // A key with this prefix followed by a punctuation key (for example,
+  // "_symbols__punctuation_,") gives the unigrams of the punctuation key,
+  // then the symbols for the key pressed ("_punctuation_list_,"), and then
+  // all symbols ("_punctuation_list"), so that the user can pick any symbol
+  // from a punctuation that has been typed.
+  static constexpr char kSymbolsKeyPrefix[] = "_symbols_";
+  static constexpr char kPunctuationListKey[] = "_punctuation_list";
+
+  struct SymbolCategory {
+    std::string title;
+    std::vector<std::string> symbols;
+  };
+
+  // Sets the categorized symbols that a "_symbols_" key ends with. If empty,
+  // the "_punctuation_list" in the language model is used instead.
+  void setSymbolTable(std::vector<SymbolCategory> symbolTable);
+
+  // Returns the titles and the counts of the groups of the unigrams of a
+  // "_symbols_" key, in the same order as the unigrams. The symbols of the
+  // key pressed are titled with keySymbolsTitle.
+  std::vector<std::pair<std::string, size_t>> getSymbolSections(
+      const std::string& key, const std::string& keySymbolsTitle);
+
   std::string getReading(const std::string& value) const;
 
   std::vector<AssociatedPhrasesV2::Phrase> findAssociatedPhrasesV2(
@@ -144,6 +167,10 @@ class McBopomofoLM : public Formosa::Gramambular2::LanguageModel {
   std::vector<UserFileIssue> getUserFileIssues() const;
 
  protected:
+  std::vector<std::vector<std::string>> getSymbolGroups(
+      const std::string& punctuationKey);
+  std::vector<SymbolCategory> symbolTable_;
+
   // Filters and converts the input unigrams and returns a new list of unigrams.
   // Unigrams whose values are found in `excludedValues` are removed, and the
   // kept values will be inserted to the `insertedValues` set.

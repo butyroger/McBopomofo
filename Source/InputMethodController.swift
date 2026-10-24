@@ -44,6 +44,7 @@ internal var gCurrentCandidateController: CandidateController?
 extension CandidateController {
     static let horizontal = HorizontalCandidateController()
     static let vertical = VerticalCandidateController()
+    static let grid = GridCandidateController()
 }
 
 @objc(McBopomofoInputMethodController)
@@ -137,6 +138,12 @@ class McBopomofoInputMethodController: IMKInputController {
                     action: #selector(openPhraseReplacementMcBopomofo(_:)), keyEquivalent: "")
             }
         }
+        menu.addItem(
+            withTitle: NSLocalizedString("Edit Text Templates", comment: ""),
+            action: #selector(openTextTemplates(_:)), keyEquivalent: "")
+        menu.addItem(
+            withTitle: NSLocalizedString("Edit Symbol Table", comment: ""),
+            action: #selector(openSymbolTable(_:)), keyEquivalent: "")
 
         menu.addItem(
             withTitle: NSLocalizedString("Reload User Phrases", comment: ""),
@@ -356,6 +363,14 @@ class McBopomofoInputMethodController: IMKInputController {
         (NSApp.delegate as? AppDelegate)?.openPhraseReplacementMcBopomofo(sender)
     }
 
+    @objc func openTextTemplates(_ sender: Any?) {
+        (NSApp.delegate as? AppDelegate)?.openTextTemplates(sender)
+    }
+
+    @objc func openSymbolTable(_ sender: Any?) {
+        (NSApp.delegate as? AppDelegate)?.openSymbolTable(sender)
+    }
+
     @objc func reloadUserPhrases(_ sender: Any?) {
         LanguageModelManager.loadUserPhrases(
             enableForPlainBopomofo: Preferences.enableUserPhrasesInPlainBopomofo)
@@ -439,6 +454,10 @@ extension McBopomofoInputMethodController {
             handle(state: newState, previous: previous, client: client)
         case let newState as InputState.IcuTransform:
             handle(state: newState, previous: previous, client: client)
+        case let newState as InputState.TextTemplate:
+            handleSpecialInputWithCandidateWindow(
+                state: newState, composingBuffer: newState.composingBuffer,
+                candidateCount: newState.candidateCount, client: client)
         case let newState as InputState.Big5:
             handle(state: newState, previous: previous, client: client)
         case let newState as InputState.SelectingDictionary:
@@ -488,7 +507,8 @@ extension McBopomofoInputMethodController {
             commit(text: previous.composingBuffer, client: client)
         case is InputState.Big5,
             is InputState.Number,
-            is InputState.IcuTransform:
+            is InputState.IcuTransform,
+            is InputState.TextTemplate:
             client.setMarkedText(
                 "", selectionRange: NSMakeRange(0, 0), replacementRange: NSMakeRange(0, 0))
         default:
@@ -815,7 +835,8 @@ extension McBopomofoInputMethodController {
                 is InputState.SelectingDictionary,
                 is InputState.ShowingCharInfo,
                 is InputState.Number,
-                is InputState.IcuTransform:
+                is InputState.IcuTransform,
+                is InputState.TextTemplate:
                 return true
             default:
                 break
@@ -838,7 +859,18 @@ extension McBopomofoInputMethodController {
         gCurrentCandidateController?.delegate = nil
         gCurrentCandidateController?.visible = false
 
-        if useVerticalMode {
+        if let state = state as? InputState.ChoosingPunctuationList,
+            let reading = state.candidates.first?.reading
+        {
+            let grid = CandidateController.grid
+            grid.sections = LanguageModelManager.symbolSections(reading: reading).compactMap {
+                guard let title = $0.first as? String, let count = $0.last as? UInt else {
+                    return nil
+                }
+                return GridCandidateSection(title: title, count: count)
+            }
+            gCurrentCandidateController = grid
+        } else if useVerticalMode {
             gCurrentCandidateController = .vertical
         } else if Preferences.useHorizontalCandidateList {
             gCurrentCandidateController = .horizontal
@@ -884,7 +916,8 @@ extension McBopomofoInputMethodController {
             { _ in "⇧ ⏎" }
         case is InputState.AssociatedPhrasesPlain,
             is InputState.Number,
-            is InputState.IcuTransform:
+            is InputState.IcuTransform,
+            is InputState.TextTemplate:
             { "⇧ " + $0 }
         default:
             { $0 }

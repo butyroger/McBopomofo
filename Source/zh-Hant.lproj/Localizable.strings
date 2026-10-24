@@ -118,6 +118,12 @@
 "Numbers" = "數字輸入";
 
 "Learned phrase \"%@\"" = "已學會詞彙「%@」";
+"Symbols for the Key" = "此鍵";
+"Edit Text Templates" = "編輯文字範本";
+"Edit Symbol Table" = "編輯符號表";
+"# Text templates. Each line is a code, a tab, and the text. Write \\n for a line break.\n# Press ` and type the code to insert the text.\n" = "# 文字範本：一行一筆，代碼、Tab、內容。內容要換行請寫 \\n。\n# 按 ` 後輸入代碼，按 Enter 送出。\n";
+"# Symbol table. Each line is a category, a tab, and the symbols separated by spaces.\n" = "# 符號表：一行一類，分類名稱、Tab、以半形空白分隔的符號。\n";
+"Text Templates" = "文字範本";
 "Boost" = "增加權重";
 
 "Cancel" = "取消";

@@ -120,6 +120,12 @@
 "Numbers" = "Numbers";
 
 "Learned phrase \"%@\"" = "Learned phrase \"%@\"";
+"Symbols for the Key" = "Symbols for the Key";
+"Edit Text Templates" = "Edit Text Templates";
+"Edit Symbol Table" = "Edit Symbol Table";
+"# Text templates. Each line is a code, a tab, and the text. Write \\n for a line break.\n# Press ` and type the code to insert the text.\n" = "# Text templates. Each line is a code, a tab, and the text. Write \\n for a line break.\n# Press ` and type the code to insert the text.\n";
+"# Symbol table. Each line is a category, a tab, and the symbols separated by spaces.\n" = "# Symbol table. Each line is a category, a tab, and the symbols separated by spaces.\n";
+"Text Templates" = "Text Templates";
 "Boost" = "Boost";
 
 "Cancel" = "Cancel";

@@ -143,6 +143,18 @@ McBopomofoLM::getUnigrams(const std::string& key) {
     return spaceUnigrams;
   }
 
+  if (key.rfind(kSymbolsKeyPrefix, 0) == 0) {
+    // Same score for all, so that the first symbol is the one shown.
+    std::vector<Formosa::Gramambular2::LanguageModel::Unigram> results;
+    for (const auto& group :
+         getSymbolGroups(key.substr(sizeof(kSymbolsKeyPrefix) - 1))) {
+      for (const auto& symbol : group) {
+        results.emplace_back(symbol, 0);
+      }
+    }
+    return results;
+  }
+
   std::vector<Formosa::Gramambular2::LanguageModel::Unigram> allUnigrams;
   std::vector<Formosa::Gramambular2::LanguageModel::Unigram> userUnigrams;
 
@@ -218,9 +230,88 @@ McBopomofoLM::getUnigrams(const std::string& key) {
   return allUnigrams;
 }
 
+void McBopomofoLM::setSymbolTable(std::vector<SymbolCategory> symbolTable) {
+  symbolTable_ = std::move(symbolTable);
+}
+
+// The first group is the symbols of the punctuation key (empty if there is
+// no key), followed by one group per category of the symbol table.
+std::vector<std::vector<std::string>> McBopomofoLM::getSymbolGroups(
+    const std::string& punctuationKey) {
+  std::vector<std::vector<std::string>> groups(1);
+  if (!punctuationKey.empty()) {
+    std::unordered_set<std::string> insertedValues;
+    auto append = [&](const std::string& key) {
+      if (!hasUnigrams(key)) {
+        return;
+      }
+      for (const auto& unigram : getUnigrams(key)) {
+        if (insertedValues.insert(unigram.value()).second) {
+          groups[0].push_back(unigram.value());
+        }
+      }
+    };
+    append(punctuationKey);
+    if (groups[0].empty()) {
+      // Not a punctuation key.
+      return {};
+    }
+
+    // The last character of a punctuation key is the key pressed, e.g. ","
+    // for "_punctuation_," and "<" for "_punctuation_Standard_<".
+    size_t lastCharStart = punctuationKey.size() - 1;
+    while (lastCharStart > 0 &&
+           (static_cast<unsigned char>(punctuationKey[lastCharStart]) &
+            0xC0) == 0x80) {
+      --lastCharStart;
+    }
+    append(std::string(kPunctuationListKey) + "_" +
+           punctuationKey.substr(lastCharStart));
+  }
+
+  if (!symbolTable_.empty()) {
+    for (const auto& category : symbolTable_) {
+      groups.push_back(category.symbols);
+    }
+  } else if (hasUnigrams(kPunctuationListKey)) {
+    std::vector<std::string> symbols;
+    for (const auto& unigram : getUnigrams(kPunctuationListKey)) {
+      symbols.push_back(unigram.value());
+    }
+    groups.push_back(std::move(symbols));
+  }
+  return groups;
+}
+
+std::vector<std::pair<std::string, size_t>> McBopomofoLM::getSymbolSections(
+    const std::string& key, const std::string& keySymbolsTitle) {
+  std::vector<std::pair<std::string, size_t>> sections;
+  if (key.rfind(kSymbolsKeyPrefix, 0) != 0) {
+    return sections;
+  }
+  auto groups = getSymbolGroups(key.substr(sizeof(kSymbolsKeyPrefix) - 1));
+  for (size_t i = 0; i < groups.size(); ++i) {
+    if (groups[i].empty()) {
+      continue;
+    }
+    std::string title;
+    if (i == 0) {
+      title = keySymbolsTitle;
+    } else if (!symbolTable_.empty()) {
+      title = symbolTable_[i - 1].title;
+    }
+    sections.emplace_back(title, groups[i].size());
+  }
+  return sections;
+}
+
 bool McBopomofoLM::hasUnigrams(const std::string& key) {
   if (key == " ") {
     return true;
+  }
+
+  if (key.rfind(kSymbolsKeyPrefix, 0) == 0) {
+    return !getUnigrams(key).empty();
   }
 
   if (!excludedPhrases_.hasUnigrams(key)) {

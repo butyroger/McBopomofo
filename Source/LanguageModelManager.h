@@ -46,6 +46,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (class, readonly, nonatomic) NSString *dataFolderPath;
 @property (class, readonly, nonatomic) NSString *userOverrideModelFolderPath;
+@property (class, readonly, nonatomic) NSString *symbolTableDataPath;
+@property (class, readonly, nonatomic) NSString *textTemplatesDataPath;
+@property (class, readonly, nonatomic) NSString *defaultSymbolTable;
+
+/// The titles and the counts, as [title, count] pairs, of the groups of the
+/// candidates of a "_symbols_" reading.
++ (NSArray<NSArray *> *)symbolSectionsForReading:(NSString *)reading NS_SWIFT_NAME(symbolSections(reading:));
 @property (class, readonly, nonatomic) NSString *userPhrasesDataPathMcBopomofo;
 @property (class, readonly, nonatomic) NSString *userPhrasesDataPathPlainBopomofo;
 @property (class, readonly, nonatomic) NSString *excludedPhrasesDataPathMcBopomofo;

@@ -283,6 +283,126 @@ class InputState: NSObject {
 
     }
 
+    /// Picking a text template by typing its code, like "addr" for an address.
+    @objc(InputStateTextTemplate)
+    class TextTemplate: InputState, CandidateProvider {
+        struct Entry {
+            var code: String
+            var text: String
+        }
+
+        @objc private(set) var code: String
+        private(set) var entries: [Entry]
+
+        @objc init(code: String) {
+            self.code = code
+            self.entries = TextTemplate.entries(matching: code)
+        }
+
+        override var description: String {
+            "<InputState.TextTemplate, code:\(code)>"
+        }
+
+        @objc public var composingBuffer: String {
+            "[\(NSLocalizedString("Text Templates", comment: ""))] \(code)"
+        }
+
+        @objc var candidateCount: Int {
+            entries.count
+        }
+
+        func candidate(at index: Int) -> String {
+            let entry = entries[index]
+            var preview = entry.text.replacingOccurrences(of: "\n", with: "⏎")
+            if preview.count > 30 {
+                preview = String(preview.prefix(30)) + "…"
+            }
+            return "\(entry.code)  \(preview)"
+        }
+
+        func reading(at index: Int) -> String? {
+            nil
+        }
+
+        @objc func text(at index: Int) -> String {
+            entries[index].text
+        }
+
+        @objc static var hasTemplates: Bool {
+            !loadEntries().isEmpty
+        }
+
+        /// The templates whose code starts with the typed code come first,
+        /// then the ones that contain it in the code or the text.
+        static func entries(matching code: String) -> [Entry] {
+            let all = loadEntries()
+            if code.isEmpty {
+                return all
+            }
+            let lowercased = code.lowercased()
+            let exact = all.filter { $0.code.lowercased() == lowercased }
+            let prefix = all.filter {
+                $0.code.lowercased() != lowercased && $0.code.lowercased().hasPrefix(lowercased)
+            }
+            let others = all.filter {
+                !$0.code.lowercased().hasPrefix(lowercased)
+                    && ($0.code.lowercased().contains(lowercased)
+                        || $0.text.localizedCaseInsensitiveContains(code))
+            }
+            return exact + prefix + others
+        }
+
+        /// Each line of the file is a code, a tab, and the text, with "\\n"
+        /// for a line break, "\\t" for a tab, and "\\\\" for a backslash.
+        private static func loadEntries() -> [Entry] {
+            guard
+                let content = try? String(
+                    contentsOfFile: LanguageModelManager.textTemplatesDataPath, encoding: .utf8)
+            else {
+                return []
+            }
+            var entries: [Entry] = []
+            for line in content.components(separatedBy: .newlines) {
+                if line.hasPrefix("#") {
+                    continue
+                }
+                let parts = line.split(separator: "\t", maxSplits: 1, omittingEmptySubsequences: false)
+                guard parts.count == 2 else {
+                    continue
+                }
+                let code = parts[0].trimmingCharacters(in: .whitespaces)
+                let text = unescape(String(parts[1]))
+                if !code.isEmpty, !text.isEmpty {
+                    entries.append(Entry(code: code, text: text))
+                }
+            }
+            return entries
+        }
+
+        private static func unescape(_ string: String) -> String {
+            var result = ""
+            var escaping = false
+            for character in string {
+                if escaping {
+                    switch character {
+                    case "n": result.append("\n")
+                    case "t": result.append("\t")
+                    default: result.append(character)
+                    }
+                    escaping = false
+                } else if character == "\\" {
+                    escaping = true
+                } else {
+                    result.append(character)
+                }
+            }
+            if escaping {
+                result.append("\\")
+            }
+            return result
+        }
+    }
+
     @objc(InputStateBig5)
     class Big5: InputState {
         @objc private(set) var code: String

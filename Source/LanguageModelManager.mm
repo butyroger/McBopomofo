@@ -51,6 +51,24 @@ static NSString *const kExcludedPhrasesMcBopomofoTemplateName = @"template-exclu
 static NSString *const kExcludedPhrasesPlainBopomofoTemplateName = @"template-exclude-phrases-plain-bpmf";
 static NSString *const kPhraseReplacementTemplateName = @"template-phrases-replacement";
 static NSString *const kTemplateExtension = @".txt";
+static NSString *const kSymbolTableFilename = @"symbol-table.txt";
+static NSString *const kTextTemplatesFilename = @"text-templates.txt";
+
+// Used when the user data folder has no symbol table. Each line is a category
+// title, a tab, and the symbols separated by spaces.
+static NSString *const kDefaultSymbolTable =
+    @"標點\t　 ， 、 。 ． ‧ ； ： ？ ！ ︰ ⋯ ‥ … ｜ — ︴ ﹏ ＃ ＆ ＊ ※ § 〃 ＠ ～\n"
+    @"括號\t（ ） 「 」 『 』 《 》 〈 〉 【 】 〔 〕 ｛ ｝ ︵ ︶ ﹁ ﹂ ﹃ ﹄ ︽ ︾ ︿ ﹀ ︻ ︼ ︷ ︸ ︹ ︺\n"
+    @"標記\t○ ● ◎ ☆ ★ ◇ ◆ □ ■ △ ▲ ▽ ▼ ㊣ ♀ ♂ ✓ ✗ ⊙ ♠ ♥ ♦ ♣ ♪ ♫ ☎ ☞\n"
+    @"箭頭\t→ ← ↑ ↓ ↗ ↖ ↘ ↙ ⇒ ⇔ ↔ ↕\n"
+    @"數學\t＋ － ± × ÷ ＝ ≠ ≒ ≡ ＜ ＞ ≦ ≧ ∞ √ ∴ ∵ ∠ ⊥ ∟ ⊿ ∩ ∪ ∫ ∼\n"
+    @"單位\t％ ‰ ° ℃ ℉ ＄ ￥ ￡ € ￠ ㎜ ㎝ ㎞ ㎡ ㎎ ㎏ ㏄ ㏕ ㏎ ㎖ ㎗ ㎘\n"
+    @"數字\t① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩ ⑴ ⑵ ⑶ ⑷ ⑸ ⑹ ⑺ ⑻ ⑼ ⑽ Ⅰ Ⅱ Ⅲ Ⅳ Ⅴ Ⅵ Ⅶ Ⅷ Ⅸ Ⅹ 〡 〢 〣 〤 〥 〦 〧 〨 〩 十 卄 卅\n"
+    @"表格\t┌ ┬ ┐ ├ ┼ ┤ └ ┴ ┘ ─ │ ═ ║ ╔ ╦ ╗ ╠ ╬ ╣ ╚ ╩ ╝ ╞ ╪ ╡ ╭ ╮ ╰ ╯ ╱ ╲ ╳\n"
+    @"圖塊\t▁ ▂ ▃ ▄ ▅ ▆ ▇ █ ▏ ▎ ▍ ▌ ▋ ▊ ▉ ▔ ░ ▒ ▓\n"
+    @"希臘\tΑ Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω α β γ δ ε ζ η θ ι κ λ μ ν ξ ο π ρ σ τ υ φ χ ψ ω\n"
+    @"注音\tㄅ ㄆ ㄇ ㄈ ㄉ ㄊ ㄋ ㄌ ㄍ ㄎ ㄏ ㄐ ㄑ ㄒ ㄓ ㄔ ㄕ ㄖ ㄗ ㄘ ㄙ ㄧ ㄨ ㄩ ㄚ ㄛ ㄜ ㄝ ㄞ ㄟ ㄠ ㄡ ㄢ ㄣ ㄤ ㄥ ㄦ ˙ ˊ ˇ ˋ\n";
+
 static NSString *const kUserOverrideModelFolderName = @"learning";
 static NSString *const kUserOverrideModelDeviceIDKey = @"UserOverrideModelDeviceID";
 
@@ -141,6 +159,7 @@ static void LTLoadVariantAnnotatorData()
 
 + (void)loadUserPhrasesWithPlainBopomofoEnabled:(BOOL)userPhraseForPlainBopomofo
 {
+    [self _loadSymbolTable];
     gLanguageModelMcBopomofo.loadUserPhrases([self userPhrasesDataPathMcBopomofo].UTF8String, [self excludedPhrasesDataPathMcBopomofo].UTF8String);
     gLanguageModelPlainBopomofo.loadUserPhrases(userPhraseForPlainBopomofo ? [self userPhrasesDataPathPlainBopomofo].UTF8String : NULL,
         [self excludedPhrasesDataPathPlainBopomofo].UTF8String);
@@ -495,6 +514,68 @@ static void LTLoadVariantAnnotatorData()
         return [UserPhraseLocationHelper defaultUserPhraseLocation];
     }
     return Preferences.customUserPhraseLocation;
+}
+
++ (NSString *)symbolTableDataPath
+{
+    return [[self dataFolderPath] stringByAppendingPathComponent:kSymbolTableFilename];
+}
+
++ (NSString *)textTemplatesDataPath
+{
+    return [[self dataFolderPath] stringByAppendingPathComponent:kTextTemplatesFilename];
+}
+
++ (NSString *)defaultSymbolTable
+{
+    return [NSLocalizedString(@"# Symbol table. Each line is a category, a tab, and the symbols separated by spaces.\n", @"") stringByAppendingString:kDefaultSymbolTable];
+}
+
++ (void)_loadSymbolTable
+{
+    NSString *content = [NSString stringWithContentsOfFile:[self symbolTableDataPath] encoding:NSUTF8StringEncoding error:nil];
+    if (content.length == 0) {
+        content = kDefaultSymbolTable;
+    }
+
+    std::vector<McBopomofo::McBopomofoLM::SymbolCategory> table;
+    NSCharacterSet *asciiWhitespaces = [NSCharacterSet characterSetWithCharactersInString:@" \t\r"];
+    for (NSString *line in [content componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]]) {
+        if ([line hasPrefix:@"#"] || [line hasPrefix:@"\uFEFF#"]) {
+            continue;
+        }
+        NSRange tab = [line rangeOfString:@"\t"];
+        if (tab.location == NSNotFound) {
+            continue;
+        }
+        // A trailing "*" marks a category in the symbol table of some other
+        // input methods. It is not a part of the title.
+        NSString *title = [[line substringToIndex:tab.location] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"\uFEFF* "]];
+        McBopomofo::McBopomofoLM::SymbolCategory category;
+        category.title = title.UTF8String;
+        // Separated by ASCII spaces only, since the full-width space is a
+        // symbol too.
+        for (NSString *rawSymbol in [[line substringFromIndex:NSMaxRange(tab)] componentsSeparatedByString:@" "]) {
+            NSString *symbol = [rawSymbol stringByTrimmingCharactersInSet:asciiWhitespaces];
+            if (symbol.length > 0) {
+                category.symbols.push_back(symbol.UTF8String);
+            }
+        }
+        if (!category.symbols.empty()) {
+            table.push_back(std::move(category));
+        }
+    }
+    gLanguageModelMcBopomofo.setSymbolTable(std::move(table));
+}
+
++ (NSArray<NSArray *> *)symbolSectionsForReading:(NSString *)reading
+{
+    NSMutableArray *sections = [NSMutableArray array];
+    std::string keyTitle = NSLocalizedString(@"Symbols for the Key", @"").UTF8String;
+    for (const auto& [title, count] : gLanguageModelMcBopomofo.getSymbolSections(reading.UTF8String, keyTitle)) {
+        [sections addObject:@[@(title.c_str()), @(count)]];
+    }
+    return sections;
 }
 
 + (NSString *)userPhrasesDataPathMcBopomofo

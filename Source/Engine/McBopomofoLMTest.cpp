@@ -136,6 +136,52 @@ TEST(McBopomofoLMTest, EarlierUserPhraseComesFirst) {
   EXPECT_EQ(unigrams[0].value(), "一動");
 }
 
+TEST(McBopomofoLMTest, SymbolsForPunctuation) {
+  constexpr char kData[] = R"(# format org.openvanilla.mcbopomofo.sorted
+_punctuation_, ， 0.0
+_punctuation_list 　 0.0
+_punctuation_list ， 0.0
+_punctuation_list ★ 0.0
+_punctuation_list_, ， 0.0
+_punctuation_list_, ﹐ 0.0
+_punctuation_list_, ， 0.0
+)";
+  McBopomofoLM lm;
+  lm.loadLanguageModel(
+      std::make_unique<ParselessPhraseDB>(kData, sizeof(kData) - 1));
+
+  auto values = [&](const std::string& key) {
+    std::vector<std::string> results;
+    for (const auto& u : lm.getUnigrams(key)) {
+      results.push_back(u.value());
+    }
+    return results;
+  };
+
+  // Without a symbol table, the punctuation list is used. The duplicated
+  // "，" of the key appears only once.
+  ASSERT_TRUE(lm.hasUnigrams("_symbols__punctuation_,"));
+  EXPECT_EQ(values("_symbols__punctuation_,"),
+            (std::vector<std::string>{"，", "﹐", "　", "，", "★"}));
+  EXPECT_EQ(lm.getSymbolSections("_symbols__punctuation_,", "key"),
+            (std::vector<std::pair<std::string, size_t>>{{"key", 2}, {"", 3}}));
+
+  // Only the list for "`".
+  EXPECT_EQ(values("_symbols_"), (std::vector<std::string>{"　", "，", "★"}));
+
+  lm.setSymbolTable({{"A", {"①", "②"}}, {"B", {"→"}}});
+  EXPECT_EQ(values("_symbols__punctuation_,"),
+            (std::vector<std::string>{"，", "﹐", "①", "②", "→"}));
+  EXPECT_EQ(lm.getSymbolSections("_symbols__punctuation_,", "key"),
+            (std::vector<std::pair<std::string, size_t>>{
+                {"key", 2}, {"A", 2}, {"B", 1}}));
+  EXPECT_EQ(lm.getSymbolSections("_symbols_", "key"),
+            (std::vector<std::pair<std::string, size_t>>{{"A", 2}, {"B", 1}}));
+
+  // Not a punctuation.
+  EXPECT_FALSE(lm.hasUnigrams("_symbols__punctuation_?"));
+}
+
 TEST(McBopomofoLMTest, ExcludedPhrases) {
   McBopomofoLM lm;
   auto db = std::make_unique<ParselessPhraseDB>(kPrimaryLMData,
