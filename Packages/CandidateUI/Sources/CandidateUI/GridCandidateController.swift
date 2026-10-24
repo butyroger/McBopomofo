@@ -289,7 +289,7 @@ public class GridCandidateController: CandidateController {
         candidateView.keyLabels = keyLabels.map { $0.displayedText }
         // Symbols do not need a large font, and a smaller one keeps more of
         // them in view.
-        let symbolFontSize = min(candidateFont.pointSize, 28)
+        let symbolFontSize = min(candidateFont.pointSize, 32)
         candidateView.candidateFont =
             NSFont(descriptor: candidateFont.fontDescriptor, size: symbolFontSize)
             ?? .systemFont(ofSize: symbolFontSize)

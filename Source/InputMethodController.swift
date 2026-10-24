@@ -894,7 +894,7 @@ extension McBopomofoInputMethodController {
         var textSize = Preferences.candidateListTextSize
         if state is InputState.TextTemplate {
             // The templates are long text, which does not need a large font.
-            textSize = min(textSize, 20)
+            textSize = min(textSize, 32)
         }
         let keyLabelSize = max(textSize / 2, kMinKeyLabelSize)
 
