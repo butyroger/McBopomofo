@@ -891,7 +891,11 @@ extension McBopomofoInputMethodController {
             }
 
         // set the attributes for the candidate panel (which uses NSAttributedString)
-        let textSize = Preferences.candidateListTextSize
+        var textSize = Preferences.candidateListTextSize
+        if state is InputState.TextTemplate {
+            // The templates are long text, which does not need a large font.
+            textSize = min(textSize, 20)
+        }
         let keyLabelSize = max(textSize / 2, kMinKeyLabelSize)
 
         func font(name: String?, size: CGFloat) -> NSFont {
