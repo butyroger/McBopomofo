@@ -2,7 +2,7 @@
 
 > **這是 [openvanilla/McBopomofo](https://github.com/openvanilla/McBopomofo) 的非官方分支（`smart-learning`），加強選字學習，並加入文字範本與分類符號表。** 官方版本與問題回報請到原專案。
 
-**下載**：到 [Releases](https://github.com/butyroger/McBopomofo/releases/latest) 下載 DMG，打開後雙擊「安裝小麥注音（智慧學習版）」。本版未經 Apple 公證，第一次打開若被擋，到「系統設定 → 隱私權與安全性」按「強制打開」即可。
+**下載**：到 [Releases](https://github.com/butyroger/McBopomofo/releases/latest) 下載 DMG，打開後雙擊「安裝小麥注音（智慧學習版）」。本版未經 Apple 公證，第一次打開若被擋，到「系統設定 → 隱私權與安全性」按「強制打開」即可。支援 macOS 12 以上（官方版需 macOS 13）。
 
 ## 這個分支優化了什麼
 

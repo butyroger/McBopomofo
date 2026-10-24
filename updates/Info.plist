@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleShortVersionString</key>
-	<string>3.1.1-learning.2</string>
+	<string>3.1.1-learning.3</string>
 	<key>CFBundleVersion</key>
-	<string>2510.2</string>
+	<string>2510.3</string>
 	<key>UpdateInfoSite</key>
 	<string>https://github.com/butyroger/McBopomofo/releases/latest</string>
 </dict>
