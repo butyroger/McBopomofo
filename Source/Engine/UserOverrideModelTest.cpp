@@ -242,6 +242,41 @@ TEST(UserOverrideModelTest, DeserializeRespectsCapacity) {
   ASSERT_EQ(uom.suggest("c", kFakeNow).candidate, "3");
 }
 
+TEST(UserOverrideModelTest, ObservationCountOfBrokenUpPhrase) {
+  // 許是 wins over 許 + 是, and the user keeps picking 氏 to break it up.
+  std::string data =
+      "ㄒㄩˇ 許 -3.0\n"
+      "ㄕˋ 是 -2.0\n"
+      "ㄕˋ 氏 -4.0\n"
+      "ㄒㄩˇ-ㄕˋ 許是 -4.0\n";
+  Formosa::Gramambular2::ReadingGrid grid(
+      std::make_shared<SimpleLM>(data.c_str()));
+  UserOverrideModel uom(kCapacity, kHalflife);
+  double timestamp = kFakeNow;
+
+  for (size_t i = 1; i <= 2; i++) {
+    grid.clear();
+    grid.insertReading("ㄒㄩˇ");
+    grid.insertReading("ㄕˋ");
+    auto walkBefore = grid.walk();
+    ASSERT_EQ(walkBefore.valuesAsStrings(), (std::vector<std::string>{"許是"}));
+    grid.overrideCandidate(1, "氏");
+    auto walkAfter = grid.walk();
+    ASSERT_EQ(walkAfter.valuesAsStrings(),
+              (std::vector<std::string>{"許", "氏"}));
+    uom.observe(walkBefore, walkAfter, 1, timestamp);
+    timestamp += 1.0;
+    ASSERT_EQ(uom.observationCount(walkAfter, 1, "氏"), i);
+    ASSERT_EQ(uom.observationCount(walkAfter, 1, "是"), 0);
+
+    // The phrase comes back on the next walk, so no suggestion matches.
+    grid.clear();
+    grid.insertReading("ㄒㄩˇ");
+    grid.insertReading("ㄕˋ");
+    ASSERT_TRUE(uom.suggest(grid.walk(), 1, timestamp).empty());
+  }
+}
+
 TEST(UserOverrideModelTest, WalkResultSnapshotTest) {
   // See https://github.com/openvanilla/McBopomofo/issues/885.
   // This is a kind of integration test for the following steps:

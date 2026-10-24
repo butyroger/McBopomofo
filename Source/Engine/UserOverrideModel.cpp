@@ -237,6 +237,22 @@ size_t UserOverrideModel::candidateObservationCount(
   return count;
 }
 
+size_t UserOverrideModel::observationCount(
+    const Formosa::Gramambular2::ReadingGrid::WalkResult& walk, size_t cursor,
+    const std::string& candidate) const {
+  auto nodeIter = walk.findNodeAt(cursor);
+  if (nodeIter == walk.nodes.cend()) {
+    return 0;
+  }
+  auto mapIter = lruMap_.find(FormObservationKey(nodeIter, walk.nodes.begin()));
+  if (mapIter == lruMap_.end()) {
+    return 0;
+  }
+  const auto& overrides = mapIter->second->second.overrides;
+  auto it = overrides.find(candidate);
+  return it == overrides.end() ? 0 : it->second.count;
+}
+
 std::string UserOverrideModel::serialize() const {
   std::ostringstream out;
   out.precision(17);

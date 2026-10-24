@@ -199,6 +199,7 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
     if (currentNode != nullptr && currentNode->currentUnigram().score() > -8) {
         [LanguageModelManager observeUserOverrideWithWalkBefore:prevWalk walkAfter:_latestWalk cursor:self.actualCandidateCursorIndex];
         [self _learnPhraseIfFrequentlyChosen:currentNode];
+        [self _learnBrokenUpPhraseIfFrequentlyChosen:currentNode walkBefore:prevWalk cursor:actualCursor];
     }
 
     if (currentNode != nullptr && flag && Preferences.moveCursorAfterSelectingCandidate) {
@@ -338,6 +339,68 @@ static const size_t kLearnPhraseThreshold = 2;
         return;
     }
 
+    if (![LanguageModelManager learnUserPhrase:[NSString stringWithFormat:@"%@ %@", value, reading]]) {
+        return;
+    }
+    if ([self.delegate respondsToSelector:@selector(keyHandler:didLearnPhrase:reading:)]) {
+        [self.delegate keyHandler:self didLearnPhrase:value reading:reading];
+    }
+}
+
+// When the user picks a single character inside a phrase, such as 氏 in 許是,
+// the user override model can never suggest it again, since the next walk
+// gives the phrase 許是 again and not the characters it observed. So once the
+// same character has been picked this many times, learn the characters that
+// now take the place of the phrase, such as 許氏, as a user phrase.
+- (void)_learnBrokenUpPhraseIfFrequentlyChosen:(const Formosa::Gramambular2::ReadingGrid::NodePtr &)node walkBefore:(const Formosa::Gramambular2::ReadingGrid::WalkResult &)walkBefore cursor:(size_t)cursor
+{
+    if (_inputMode != InputModeBopomofo || node->spanningLength() != 1) {
+        return;
+    }
+
+    size_t phraseEnd = 0;
+    auto prevNodeIter = walkBefore.findNodeAt(cursor, &phraseEnd);
+    if (prevNodeIter == walkBefore.nodes.cend()) {
+        return;
+    }
+    size_t phraseLength = (*prevNodeIter)->spanningLength();
+    if (phraseLength < 2 || phraseLength > 4) {
+        return;
+    }
+    size_t phraseStart = phraseEnd - phraseLength;
+
+    if (_userOverrideModel->observationCount(_latestWalk, cursor, node->currentUnigram().value()) < kLearnPhraseThreshold) {
+        return;
+    }
+
+    // Collect the nodes that now cover the span of the old phrase.
+    NSMutableString *value = [NSMutableString string];
+    NSMutableArray<NSString *> *readings = [NSMutableArray array];
+    size_t position = 0;
+    for (const auto &n : _latestWalk.nodes) {
+        size_t start = position;
+        position += n->spanningLength();
+        if (position <= phraseStart) {
+            continue;
+        }
+        if (start >= phraseEnd) {
+            break;
+        }
+        if (start < phraseStart || position > phraseEnd) {
+            return;
+        }
+        const auto &unigram = n->currentUnigram();
+        if (n->reading().empty() || n->reading()[0] == '_' || (!unigram.rawValue().empty() && unigram.rawValue() != unigram.value())) {
+            return;
+        }
+        [value appendString:@(unigram.value().c_str())];
+        [readings addObject:@(n->reading().c_str())];
+    }
+    if (value.length == 0 || [value rangeOfCharacterFromSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]].location != NSNotFound) {
+        return;
+    }
+
+    NSString *reading = [readings componentsJoinedByString:@"-"];
     if (![LanguageModelManager learnUserPhrase:[NSString stringWithFormat:@"%@ %@", value, reading]]) {
         return;
     }
@@ -930,6 +993,27 @@ static const size_t kLearnPhraseThreshold = 2;
             return YES;
         }
         if ([self _enterSymbolTableWithKey:std::string(McBopomofo::McBopomofoLM::kSymbolsKeyPrefix) input:input stateCallback:stateCallback]) {
+            return YES;
+        }
+    }
+
+    // MARK: Digits
+    // In a layout that does not use digits for Bopomofo, such as Hsu, put a
+    // digit into the composing buffer, so that Chinese and digits can be
+    // typed together without committing first, like GOING does.
+    if (charCode >= '0' && charCode <= '9' && !input.isControlHold && !input.isCommandHold && !input.isOptionHold && [state isKindOfClass:[InputStateNotEmpty class]]) {
+        std::string reading = std::string("_numpad_") + std::string(1, (char)charCode);
+        if (_languageModel->hasUnigrams(reading)) {
+            if (!_bpmfReadingBuffer->isEmpty()) {
+                errorCallback();
+                stateCallback(state);
+                return YES;
+            }
+            _grid->insertReading(reading);
+            // Keep the half-width digit, not the full-width one.
+            _grid->overrideCandidate(_grid->cursor() - 1, Formosa::Gramambular2::ReadingGrid::Candidate(reading, std::string(1, (char)charCode)));
+            [self _walk];
+            stateCallback([self buildInputtingState]);
             return YES;
         }
     }

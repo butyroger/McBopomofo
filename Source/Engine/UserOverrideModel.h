@@ -67,6 +67,12 @@ class UserOverrideModel {
   [[nodiscard]] size_t candidateObservationCount(
       const std::string& candidate) const;
 
+  // Returns the number of times the user has picked the candidate for the
+  // node at the cursor of the walk, in the context of the nodes before it.
+  [[nodiscard]] size_t observationCount(
+      const Formosa::Gramambular2::ReadingGrid::WalkResult& walk,
+      size_t cursor, const std::string& candidate) const;
+
   // Serializes all observations into a tab-separated text, from the least
   // recently used to the most recently used. Each line is:
   // key<TAB>candidate<TAB>count<TAB>timestamp<TAB>forceHighScoreOverride
