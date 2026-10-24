@@ -100,7 +100,7 @@ private class GridCandidateView: NSView {
 
     override func draw(_: NSRect) {
         let titleAttrs: [NSAttributedString.Key: Any] = [
-            .font: titleFont, .foregroundColor: NSColor.secondaryLabelColor,
+            .font: titleFont, .foregroundColor: NSColor.labelColor.withAlphaComponent(0.7),
         ]
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
@@ -237,14 +237,30 @@ public class GridCandidateController: CandidateController {
         delegate?.candidateCountForController(self) ?? 0
     }
 
-    /// Each section takes one row, so the grid is as wide as the longest
-    /// section, with at least this many columns. The key labels apply to the
-    /// first columns.
+    /// The grid is as wide as the first full section, i.e. the longer one of
+    /// the first two sections (the first one is often a short list of the
+    /// symbols of a key), with at least this many columns. Longer sections
+    /// wrap. The key labels apply to the first columns.
     @objc public var minimumColumnCount: Int = 12
+    /// The grid is never wider than this fraction of the screen.
+    @objc public var maximumScreenWidthFraction: CGFloat = 0.75
+
+    private var samples: [String] = []
 
     private var columnCount: UInt {
         let longest = rows.map { $0.count }.max() ?? 0
         return max(longest, UInt(max(keyLabels.count, minimumColumnCount, 1)))
+    }
+
+    private func applyFonts() {
+        // Symbols do not need a large font, and a smaller one keeps more of
+        // them in view.
+        let symbolFontSize = min(candidateFont.pointSize, 32)
+        candidateView.candidateFont =
+            NSFont(descriptor: candidateFont.fontDescriptor, size: symbolFontSize)
+            ?? .systemFont(ofSize: symbolFontSize)
+        candidateView.keyLabelFont = .systemFont(ofSize: max(round(symbolFontSize * 0.4), 8))
+        candidateView.titleFont = .systemFont(ofSize: max(round(symbolFontSize * 0.55), 11))
     }
 
     private func buildRows() {
@@ -254,9 +270,29 @@ public class GridCandidateController: CandidateController {
         if groups.reduce(0, { $0 + $1.1 }) != total {
             groups = [(nil, total)]
         }
+
+        // Measure the cells to find how many columns fit on the screen.
+        candidateView.columnCount = 1
+        _ = candidateView.layout(
+            allTitles: groups.compactMap { $0.0 }, sampleCandidates: samples)
+        let screenWidth = (window?.screen ?? NSScreen.main)?.visibleFrame.width ?? 1440
+        let available = screenWidth * maximumScreenWidthFraction - candidateView.titleWidth
+        let fittingColumns = max(Int(available / max(candidateView.cellWidth, 1)), 1)
+        let firstSectionColumns = Int(groups.prefix(2).map { $0.1 }.max() ?? 0)
+        let maxColumns = UInt(
+            max(
+                min(max(firstSectionColumns, minimumColumnCount), fittingColumns),
+                keyLabels.count, 1))
+
         var start: UInt = 0
         for (title, count) in groups where count > 0 {
-            rows.append(GridRow(title: title, start: start, count: count))
+            var offset: UInt = 0
+            while offset < count {
+                let rowCount = min(maxColumns, count - offset)
+                rows.append(
+                    GridRow(title: offset == 0 ? title : nil, start: start + offset, count: rowCount))
+                offset += rowCount
+            }
             start += count
         }
     }
@@ -282,14 +318,6 @@ public class GridCandidateController: CandidateController {
         candidateView.columnCount = Int(columnCount)
         candidateView.visibleRowCount = min(visible, rows.count)
         candidateView.keyLabels = keyLabels.map { $0.displayedText }
-        // Symbols do not need a large font, and a smaller one keeps more of
-        // them in view.
-        let symbolFontSize = min(candidateFont.pointSize, 32)
-        candidateView.candidateFont =
-            NSFont(descriptor: candidateFont.fontDescriptor, size: symbolFontSize)
-            ?? .systemFont(ofSize: symbolFontSize)
-        candidateView.keyLabelFont = .systemFont(ofSize: max(round(symbolFontSize * 0.4), 8))
-        candidateView.titleFont = .systemFont(ofSize: max(round(symbolFontSize * 0.55), 11))
         candidateView.candidates = { [weak self] index in
             guard let self else {
                 return ""
@@ -297,11 +325,6 @@ public class GridCandidateController: CandidateController {
             return delegate.candidateController(self, candidateAtIndex: index)
         }
 
-        let total = candidateCount
-        var samples: [String] = []
-        for index in 0..<min(total, 400) {
-            samples.append(delegate.candidateController(self, candidateAtIndex: index))
-        }
         let size = candidateView.layout(
             allTitles: rows.compactMap { $0.title }, sampleCandidates: samples)
         candidateView.frame = NSRect(origin: .zero, size: size)
@@ -338,6 +361,13 @@ public class GridCandidateController: CandidateController {
     }
 
     override public func reloadData() {
+        applyFonts()
+        samples = []
+        if let delegate {
+            for index in 0..<min(candidateCount, 400) {
+                samples.append(delegate.candidateController(self, candidateAtIndex: index))
+            }
+        }
         buildRows()
         candidateView.highlightedIndex = 0
         candidateView.firstVisibleRow = 0
