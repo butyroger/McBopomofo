@@ -15,11 +15,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.1.1-learning.4</string>
+	<string>3.1.1-learning.5</string>
 	<key>CFBundleSignature</key>
 	<string>BPMF</string>
 	<key>CFBundleVersion</key>
-	<string>2510.4</string>
+	<string>2510.5</string>
 	<key>ComponentInputModeDict</key>
 	<dict>
 		<key>tsInputModeListKey</key>
@@ -318,7 +318,7 @@
 		</dict>
 	</array>
 	<key>TICapsLockLanguageSwitchCapable</key>
-	<true/>
+	<false/>
 	<key>TISInputSourceID</key>
 	<string>org.openvanilla.inputmethod.McBopomofo</string>
 	<key>TISIntendedLanguage</key>
