@@ -24,9 +24,11 @@
 
 #include "UserOverrideModel.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <list>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -217,6 +219,92 @@ UserOverrideModel::Suggestion UserOverrideModel::suggest(const std::string& key,
     }
   }
   return UserOverrideModel::Suggestion{candidate, forceHighScoreOverride};
+}
+
+size_t UserOverrideModel::candidateObservationCount(
+    const std::string& candidate) const {
+  size_t count = 0;
+  for (const auto& keyValuePair : lruList_) {
+    const auto& overrides = keyValuePair.second.overrides;
+    auto it = overrides.find(candidate);
+    if (it != overrides.end()) {
+      count += it->second.count;
+    }
+  }
+  return count;
+}
+
+std::string UserOverrideModel::serialize() const {
+  std::ostringstream out;
+  out.precision(17);
+  for (auto it = lruList_.rbegin(); it != lruList_.rend(); ++it) {
+    for (const auto& [candidate, o] : it->second.overrides) {
+      out << it->first << '\t' << candidate << '\t' << o.count << '\t'
+          << o.timestamp << '\t' << (o.forceHighScoreOverride ? 1 : 0)
+          << '\n';
+    }
+  }
+  return out.str();
+}
+
+size_t UserOverrideModel::deserialize(const std::string& text) {
+  lruList_.clear();
+  lruMap_.clear();
+
+  size_t loaded = 0;
+  std::istringstream in(text);
+  std::string line;
+  while (std::getline(in, line)) {
+    std::vector<std::string> fields;
+    size_t start = 0;
+    while (true) {
+      size_t tab = line.find('\t', start);
+      fields.push_back(line.substr(start, tab - start));
+      if (tab == std::string::npos) {
+        break;
+      }
+      start = tab + 1;
+    }
+    // NOLINTNEXTLINE(readability-magic-numbers)
+    if (fields.size() != 5 || fields[0].empty() || fields[1].empty()) {
+      continue;
+    }
+
+    size_t count = 0;
+    double timestamp = 0;
+    try {
+      count = std::stoul(fields[2]);
+      timestamp = std::stod(fields[3]);
+    } catch (...) {
+      continue;
+    }
+    if (count == 0) {
+      continue;
+    }
+
+    const std::string& key = fields[0];
+    auto mapIter = lruMap_.find(key);
+    if (mapIter == lruMap_.end()) {
+      lruList_.emplace_front(key, Observation());
+      mapIter = lruMap_.emplace(key, lruList_.begin()).first;
+    } else {
+      lruList_.splice(lruList_.begin(), lruList_, mapIter->second);
+    }
+
+    Observation& observation = mapIter->second->second;
+    Override& o = observation.overrides[fields[1]];
+    observation.count += count;
+    o.count += count;
+    o.timestamp = std::max(o.timestamp, timestamp);
+    o.forceHighScoreOverride = fields[4] == "1";
+    ++loaded;
+  }
+
+  while (lruList_.size() > capacity_) {
+    lruMap_.erase(lruList_.back().first);
+    lruList_.pop_back();
+  }
+  return loaded;
 }
 
 void UserOverrideModel::Observation::update(const std::string& candidate,

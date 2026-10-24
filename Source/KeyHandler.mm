@@ -194,12 +194,51 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
     Formosa::Gramambular2::ReadingGrid::NodePtr currentNode = *nodeIter;
     if (currentNode != nullptr && currentNode->currentUnigram().score() > -8) {
         _userOverrideModel->observe(prevWalk, _latestWalk, self.actualCandidateCursorIndex, [NSDate date].timeIntervalSince1970);
+        [LanguageModelManager saveUserOverrideModel];
+        [self _learnPhraseIfFrequentlyChosen:currentNode];
     }
 
     if (currentNode != nullptr && flag && Preferences.moveCursorAfterSelectingCandidate) {
         _grid->setCursor(accumulatedCursor);
     } else {
         _grid->setCursor(originalCursorIndex);
+    }
+}
+
+// Turns a multi-character phrase into a user phrase once the user has picked
+// it this many times, so that it wins without any context from then on.
+static const size_t kLearnPhraseThreshold = 3;
+
+- (void)_learnPhraseIfFrequentlyChosen:(const Formosa::Gramambular2::ReadingGrid::NodePtr &)node
+{
+    if (_inputMode != InputModeBopomofo || node->spanningLength() < 2) {
+        return;
+    }
+
+    const auto &unigram = node->currentUnigram();
+    // Skip expanded input macros, and values that the user phrase file
+    // format cannot hold.
+    if (!unigram.rawValue().empty() && unigram.rawValue() != unigram.value()) {
+        return;
+    }
+    NSString *value = @(unigram.value().c_str());
+    NSString *reading = @(node->reading().c_str());
+    if (value.length == 0 || [value rangeOfCharacterFromSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]].location != NSNotFound) {
+        return;
+    }
+    if ([reading hasPrefix:@"_"] || [reading containsString:@"-"] == NO) {
+        return;
+    }
+
+    if (_userOverrideModel->candidateObservationCount(unigram.value()) < kLearnPhraseThreshold) {
+        return;
+    }
+
+    if (![LanguageModelManager learnUserPhrase:[NSString stringWithFormat:@"%@ %@", value, reading]]) {
+        return;
+    }
+    if ([self.delegate respondsToSelector:@selector(keyHandler:didLearnPhrase:reading:)]) {
+        [self.delegate keyHandler:self didLearnPhrase:value reading:reading];
     }
 }
 

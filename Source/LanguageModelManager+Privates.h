@@ -33,6 +33,14 @@ NS_ASSUME_NONNULL_BEGIN
 @property (class, readonly, nonatomic) McBopomofo::McBopomofoLM *languageModelPlainBopomofo;
 @property (class, readonly, nonatomic) McBopomofo::UserOverrideModel *userOverrideModel;
 @property (class, readonly, nonatomic) McBopomofo::VariantAnnotator *variantAnnotator;
+@property (class, readonly, nonatomic) NSString *userOverrideModelDataPath;
+
+/// Persists the user override model to the user data folder.
++ (void)saveUserOverrideModel;
+
+/// Writes a phrase learned from the user's candidate selections. Unlike
+/// writeUserPhrase:, a phrase that the user has excluded is never written.
++ (BOOL)learnUserPhrase:(NSString *)userPhrase;
 @end
 
 NS_ASSUME_NONNULL_END

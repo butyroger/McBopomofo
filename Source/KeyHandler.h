@@ -41,6 +41,8 @@ extern InputMode InputModePlainBopomofo;
 - (BOOL)keyHandler:(KeyHandler *)keyHandler didRequestBoostScoreForPhrase:(NSString *)phrase reading:(NSString *)reading;
 - (BOOL)keyHandler:(KeyHandler *)keyHandler didRequestExcludePhrase:(NSString *)phrase reading:(NSString *)reading;
 - (BOOL)keyHandlerDidRequestReloadLanguageModel:(KeyHandler *)keyHandler;
+@optional
+- (void)keyHandler:(KeyHandler *)keyHandler didLearnPhrase:(NSString *)phrase reading:(NSString *)reading;
 @end
 
 @interface BuildAssociatedPhraseParams: NSObject

@@ -163,6 +163,62 @@ class SimpleLM : public Formosa::Gramambular2::LanguageModel {
   std::map<std::string, std::vector<Unigram>> db_;
 };
 
+TEST(UserOverrideModelTest, SerializeAndDeserialize) {
+  UserOverrideModel uom(kCapacity, kHalflife);
+  uom.observe("a", "1", kFakeNow);
+  uom.observe("b", "2", kFakeNow + 1, true);
+  uom.observe("b", "3", kFakeNow + 2);
+  uom.observe("b", "3", kFakeNow + 3);
+  uom.observe("c", "4", kFakeNow + 4);
+
+  UserOverrideModel restored(kCapacity, kHalflife);
+  ASSERT_EQ(restored.deserialize(uom.serialize()), 4);
+  ASSERT_EQ(restored.serialize(), uom.serialize());
+
+  ASSERT_EQ(restored.suggest("a", kFakeNow).candidate, "1");
+  ASSERT_EQ(restored.suggest("b", kFakeNow + 3).candidate, "3");
+  ASSERT_EQ(restored.suggest("c", kFakeNow + 4).candidate, "4");
+  ASSERT_EQ(restored.candidateObservationCount("3"), 2);
+  ASSERT_EQ(restored.candidateObservationCount("2"), 1);
+  ASSERT_EQ(restored.candidateObservationCount("x"), 0);
+
+  // The LRU order is preserved: "a" is the least recently used one.
+  restored.observe("d", "5", kFakeNow + 5);
+  restored.observe("e", "6", kFakeNow + 6);
+  restored.observe("f", "7", kFakeNow + 7);
+  ASSERT_TRUE(restored.suggest("a", kFakeNow + 7).empty());
+  ASSERT_EQ(restored.suggest("b", kFakeNow + 7).candidate, "3");
+}
+
+TEST(UserOverrideModelTest, DeserializeSkipsMalformedLines) {
+  UserOverrideModel uom(kCapacity, kHalflife);
+  uom.observe("old", "x", kFakeNow);
+  std::string text =
+      "a\t1\t2\t1657772432\t0\n"
+      "bad line\n"
+      "b\t2\tnot-a-number\t1657772432\t0\n"
+      "c\t3\t1\t1657772432\n"
+      "\n"
+      "d\t\xe5\xad\x97\xe5\xbd\x99\t1\t1657772432\t1";
+  ASSERT_EQ(uom.deserialize(text), 2);
+  ASSERT_TRUE(uom.suggest("old", kFakeNow).empty());
+  ASSERT_EQ(uom.suggest("a", kFakeNow).candidate, "1");
+  auto s = uom.suggest("d", kFakeNow);
+  ASSERT_EQ(s.candidate, "\xe5\xad\x97\xe5\xbd\x99");
+  ASSERT_TRUE(s.forceHighScoreOverride);
+}
+
+TEST(UserOverrideModelTest, DeserializeRespectsCapacity) {
+  UserOverrideModel uom(2, kHalflife);
+  ASSERT_EQ(uom.deserialize("a\t1\t1\t1657772432\t0\n"
+                            "b\t2\t1\t1657772432\t0\n"
+                            "c\t3\t1\t1657772432\t0\n"),
+            3);
+  ASSERT_TRUE(uom.suggest("a", kFakeNow).empty());
+  ASSERT_EQ(uom.suggest("b", kFakeNow).candidate, "2");
+  ASSERT_EQ(uom.suggest("c", kFakeNow).candidate, "3");
+}
+
 TEST(UserOverrideModelTest, WalkResultSnapshotTest) {
   // See https://github.com/openvanilla/McBopomofo/issues/885.
   // This is a kind of integration test for the following steps:

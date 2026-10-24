@@ -30,8 +30,8 @@
 
 @import OpenCCBridge;
 
-static const int kUserOverrideModelCapacity = 500;
-static const double kObservedOverrideHalflife = 5400.0; // 1.5 hr.
+static const int kUserOverrideModelCapacity = 5000;
+static const double kObservedOverrideHalflife = 30.0 * 86400.0; // 30 days.
 
 static McBopomofo::McBopomofoLM gLanguageModelMcBopomofo;
 static McBopomofo::McBopomofoLM gLanguageModelPlainBopomofo;
@@ -44,6 +44,8 @@ static NSString *const kExcludedPhrasesMcBopomofoTemplateName = @"template-exclu
 static NSString *const kExcludedPhrasesPlainBopomofoTemplateName = @"template-exclude-phrases-plain-bpmf";
 static NSString *const kPhraseReplacementTemplateName = @"template-phrases-replacement";
 static NSString *const kTemplateExtension = @".txt";
+static NSString *const kUserOverrideModelFolderName = @"McBopomofo-Learning";
+static NSString *const kUserOverrideModelFilename = @"user-override-model.txt";
 
 @implementation LanguageModelManager
 
@@ -395,6 +397,25 @@ static void LTLoadVariantAnnotatorData()
     return result;
 }
 
++ (BOOL)learnUserPhrase:(NSString *)userPhrase
+{
+    if (![self checkIfUserLanguageModelFilesExist]) {
+        return NO;
+    }
+
+    // Unlike writeUserPhrase:, respect the user's decision to exclude a
+    // phrase, and never bring it back automatically.
+    if ([self _checkIfPhrase:userPhrase existAtPath:[self excludedPhrasesDataPathMcBopomofo]]) {
+        return NO;
+    }
+
+    NSString *includePath = [self userPhrasesDataPathMcBopomofo];
+    if ([self _checkIfPhrase:userPhrase existAtPath:includePath]) {
+        return NO;
+    }
+    return [self _writePhrase:userPhrase atEndOfPath:includePath];
+}
+
 + (BOOL)removeUserPhrase:(NSString *)userPhrase
 {
     if (![self checkIfUserLanguageModelFilesExist]) {
@@ -462,7 +483,65 @@ static void LTLoadVariantAnnotatorData()
 
 + (McBopomofo::UserOverrideModel *)userOverrideModel
 {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        [self _loadUserOverrideModel];
+    });
     return &gUserOverrideModel;
+}
+
+// The model is saved after every candidate selection, so it lives outside the
+// user phrase folder, where any change triggers a reload of the user phrases.
++ (NSString *)userOverrideModelDataPath
+{
+    NSString *appSupportPath = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES).firstObject;
+    NSString *folderPath = [appSupportPath stringByAppendingPathComponent:kUserOverrideModelFolderName];
+    return [folderPath stringByAppendingPathComponent:kUserOverrideModelFilename];
+}
+
++ (dispatch_queue_t)_userOverrideModelIOQueue
+{
+    static dispatch_queue_t queue;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        queue = dispatch_queue_create("org.openvanilla.McBopomofo.UserOverrideModelIO", DISPATCH_QUEUE_SERIAL);
+    });
+    return queue;
+}
+
++ (void)_loadUserOverrideModel
+{
+    NSString *path = [self userOverrideModelDataPath];
+    if (![[NSFileManager defaultManager] fileExistsAtPath:path]) {
+        return;
+    }
+    NSError *error = nil;
+    NSString *content = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&error];
+    if (content == nil) {
+        NSLog(@"Failed to read user override model at %@: %@", path, error);
+        return;
+    }
+    gUserOverrideModel.deserialize(content.UTF8String);
+}
+
++ (void)saveUserOverrideModel
+{
+    // Serialize on the caller's thread, which owns the model, and leave the
+    // file I/O to a serial queue so that typing is never blocked.
+    std::string serialized = gUserOverrideModel.serialize();
+    NSData *data = [NSData dataWithBytes:serialized.data() length:serialized.size()];
+    NSString *path = [self userOverrideModelDataPath];
+    dispatch_async([self _userOverrideModelIOQueue], ^{
+        NSError *error = nil;
+        NSString *folderPath = [path stringByDeletingLastPathComponent];
+        if (![[NSFileManager defaultManager] createDirectoryAtPath:folderPath withIntermediateDirectories:YES attributes:nil error:&error]) {
+            NSLog(@"Failed to create %@: %@", folderPath, error);
+            return;
+        }
+        if (![data writeToFile:path options:NSDataWritingAtomic error:&error]) {
+            NSLog(@"Failed to save user override model to %@: %@", path, error);
+        }
+    });
 }
 
 + (McBopomofo::VariantAnnotator *)variantAnnotator

@@ -24,6 +24,7 @@
 import CandidateUI
 import Cocoa
 import InputMethodKit
+import NotifierUI
 
 extension McBopomofoInputMethodController: KeyHandlerDelegate {
     func candidateController(for keyHandler: KeyHandler) -> Any {
@@ -106,6 +107,12 @@ extension McBopomofoInputMethodController: KeyHandlerDelegate {
             runUserPhraseHookIfEnabled(text: phrase)
         }
         return result
+    }
+
+    func keyHandler(_ keyHandler: KeyHandler, didLearnPhrase phrase: String, reading: String) {
+        NotifierController.notify(
+            message: String(
+                format: NSLocalizedString("Learned phrase \"%@\"", comment: ""), phrase))
     }
 
     func keyHandler(

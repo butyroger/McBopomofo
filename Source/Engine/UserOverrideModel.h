@@ -62,6 +62,20 @@ class UserOverrideModel {
 
   Suggestion suggest(const std::string& key, double timestamp);
 
+  // Returns the total number of times the user has picked the candidate,
+  // across all observed contexts.
+  [[nodiscard]] size_t candidateObservationCount(
+      const std::string& candidate) const;
+
+  // Serializes all observations into a tab-separated text, from the least
+  // recently used to the most recently used. Each line is:
+  // key<TAB>candidate<TAB>count<TAB>timestamp<TAB>forceHighScoreOverride
+  [[nodiscard]] std::string serialize() const;
+
+  // Replaces all observations with the ones in the serialized text. Malformed
+  // lines are skipped. Returns the number of loaded overrides.
+  size_t deserialize(const std::string& text);
+
  private:
   struct Override {
     size_t count = 0;

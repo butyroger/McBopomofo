@@ -117,6 +117,7 @@
 
 "Numbers" = "數字輸入";
 
+"Learned phrase \"%@\"" = "已學會詞彙「%@」";
 "Boost" = "增加權重";
 
 "Cancel" = "取消";
