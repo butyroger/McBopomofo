@@ -1,5 +1,37 @@
 # OpenVanilla McBopomofo 小麥注音輸入法
 
+> **這是 [openvanilla/McBopomofo](https://github.com/openvanilla/McBopomofo) 的非官方分支（`smart-learning`），加強選字學習。** 官方版本與問題回報請到原專案。
+
+## 這個分支優化了什麼
+
+原版小麥注音雖然會記住你手動選的字詞（User Override Model），但有兩個限制，導致同樣的詞每次都要重新選：
+
+- 學習結果只存在記憶體，登出、重開機或輸入法重新啟動就全部消失。
+- 記憶的半衰期只有 1.5 小時、最多 500 筆，隔天就忘了。
+
+本分支的改動：
+
+1. **學習結果寫入檔案**：每次選字後存到 `~/Library/Application Support/McBopomofo-Learning/user-override-model.txt`，啟動時讀回，重開機也記得。檔案刻意放在使用者詞庫資料夾之外，避免每次存檔都觸發詞庫重新載入。
+2. **記得更久**：半衰期由 1.5 小時改為 30 天，容量由 500 筆增為 5000 筆。
+3. **常選的詞自動加入使用者詞庫**：兩個字以上的詞，手動選了 3 次之後會自動寫入 `data.txt`，並跳出「已學會詞彙」通知；之後不需前後文也會優先出現。曾經排除（選字時按 `-`）的詞不會被自動加回。
+
+想清除學習記錄，刪掉上述 `user-override-model.txt` 即可；自動加入的詞可以在「編輯使用者詞彙」裡刪除。
+
+### 小提示：Caps Lock 切換英文會卡、第一個字變大寫
+
+這是 macOS「使用大寫鎖定鍵切換『ABC』輸入法」造成的：系統要先判斷輕按（切換輸入法）還是長按（大寫鎖定），所以會延遲，判斷錯就變成大寫。建議到「系統設定 → 鍵盤 → 輸入方式」關掉該選項，小麥注音本身在 Caps Lock 開啟時就會直接輸出小寫英文。
+
+### 自行編譯安裝
+
+```bash
+xcodebuild -project McBopomofo.xcodeproj -scheme McBopomofo -configuration Release \
+  -derivedDataPath build build CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=
+ditto build/Build/Products/Release/McBopomofo.app ~/Library/Input\ Methods/McBopomofo.app
+pkill -x McBopomofo
+```
+
+---
+
 ## 系統需求
 
 小麥注音輸入法可以在 macOS 13 以上版本運作。如果您要自行編譯小麥注音輸入法，或參與開發，您需要：
