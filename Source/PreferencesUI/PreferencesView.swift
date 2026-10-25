@@ -476,6 +476,17 @@ private struct BasicPreferencesView: View {
                 .fixedSize()
             }
 
+            PreferenceRow(localized("Candidate Panel Theme:")) {
+                Picker("", selection: $preferences.candidatePanelTheme) {
+                    Text(localized("Follow System")).tag(0)
+                    Text(localized("Light")).tag(1)
+                    Text(localized("Dark")).tag(2)
+                }
+                .labelsHidden()
+                .pickerStyle(RadioGroupPickerStyle())
+                .fixedSize()
+            }
+
             PreferenceRow(localized("Candidate Text Size:")) {
                 Picker("", selection: $preferences.candidateListTextSize) {
                     ForEach(preferences.candidateListTextSizeOptions, id: \.self) { size in

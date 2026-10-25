@@ -121,6 +121,14 @@ final class PreferencesViewModel: NSObject, ObservableObject {
         }
     }
 
+    var candidatePanelTheme: Int {
+        get { Preferences.candidatePanelTheme }
+        set {
+            objectWillChange.send()
+            Preferences.candidatePanelTheme = newValue
+        }
+    }
+
     var candidateListTextSize: CGFloat {
         get { Preferences.candidateListTextSize }
         set {

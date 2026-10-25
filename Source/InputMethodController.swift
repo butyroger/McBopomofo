@@ -959,6 +959,12 @@ extension McBopomofoInputMethodController {
             CandidateKeyLabel(key: String($0), displayedText: keyLabelFormat(String($0)))
         }
 
+        gCurrentCandidateController?.window?.appearance =
+            switch Preferences.candidatePanelTheme {
+            case 1: NSAppearance(named: .aqua)
+            case 2: NSAppearance(named: .darkAqua)
+            default: nil
+            }
         gCurrentCandidateController?.delegate = self
         gCurrentCandidateController?.reloadData()
         if let state = state as? InputState.ChoosingPunctuationList,

@@ -35,6 +35,7 @@ private let kCandidateListTextSizeKey = "CandidateListTextSize"
 private let kSelectPhraseAfterCursorAsCandidateKey = "SelectPhraseAfterCursorAsCandidate"
 private let kMoveCursorAfterSelectingCandidateKey = "MoveCursorAfterSelectingCandidate"
 private let kUseHorizontalCandidateListPreferenceKey = "UseHorizontalCandidateList"
+private let kCandidatePanelThemeKey = "CandidatePanelTheme"
 private let kChooseCandidateUsingSpaceKey = "ChooseCandidateUsingSpaceKey"
 private let kChineseConversionEnabledKey = "ChineseConversionEnabled"
 private let kHalfWidthPunctuationEnabledKey = "HalfWidthPunctuationEnable"
@@ -226,6 +227,7 @@ class Preferences: NSObject {
             kCandidateListTextSizeKey,
             kSelectPhraseAfterCursorAsCandidateKey,
             kUseHorizontalCandidateListPreferenceKey,
+            kCandidatePanelThemeKey,
             kChooseCandidateUsingSpaceKey,
             kChineseConversionEnabledKey,
             kHalfWidthPunctuationEnabledKey,
@@ -309,6 +311,11 @@ class Preferences: NSObject {
 
     @UserDefault(key: kUseHorizontalCandidateListPreferenceKey, defaultValue: false)
     @objc static var useHorizontalCandidateList: Bool
+
+    /// The appearance of the candidate panels: 0 follows the system, 1 is
+    /// light, and 2 is dark.
+    @UserDefault(key: kCandidatePanelThemeKey, defaultValue: 0)
+    @objc static var candidatePanelTheme: Int
 
     @UserDefault(key: kChooseCandidateUsingSpaceKey, defaultValue: true)
     @objc static var chooseCandidateUsingSpace: Bool
@@ -649,6 +656,9 @@ extension Preferences {
         )
         lines.append(
             "  - Candidate Window: \(Preferences.useHorizontalCandidateList ? "Horizontal" : "Vertical")"
+        )
+        lines.append(
+            "  - Candidate Panel Theme: \(["System", "Light", "Dark"][min(max(Preferences.candidatePanelTheme, 0), 2)])"
         )
         lines.append(
             "  - Chinese Conversion: \(Preferences.chineseConversionEnabled ? "Enabled" : "Disabled")"
