@@ -173,7 +173,7 @@ private class GridCandidateView: NSView {
 
             let isHighlightedRow =
                 highlightedIndex >= row.start && highlightedIndex < row.start + row.count
-            // The key labels start from the highlighted candidate, like GOING.
+            // The key labels start from the highlighted candidate.
             // While picking a row, they show what the second key picks after
             // it, from the first candidate of the row.
             let firstLabeledColumn =
@@ -469,7 +469,7 @@ public class GridCandidateController: CandidateController {
         moveHighlight(byRows: -1)
     }
 
-    /// Picking a candidate with the keys takes two of them, like GOING: the
+    /// Picking a candidate with the keys takes two of them: the
     /// first one picks a row, and the second one a candidate in the row. The
     /// labels of both start from the highlighted candidate.
     @objc public private(set) var isChoosingRow: Bool = true

@@ -1000,7 +1000,7 @@ static const size_t kLearnPhraseThreshold = 2;
     // MARK: Digits
     // In a layout that does not use digits for Bopomofo, such as Hsu, put a
     // digit into the composing buffer, so that Chinese and digits can be
-    // typed together without committing first, like GOING does.
+    // typed together without committing first.
     if (charCode >= '0' && charCode <= '9' && !input.isControlHold && !input.isCommandHold && !input.isOptionHold && [state isKindOfClass:[InputStateNotEmpty class]]) {
         std::string reading = std::string("_numpad_") + std::string(1, (char)charCode);
         if (_languageModel->hasUnigrams(reading)) {
