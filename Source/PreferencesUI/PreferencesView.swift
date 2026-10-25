@@ -793,7 +793,14 @@ private struct ComboBoxTextField: NSViewRepresentable {
         }
 
         func comboBoxSelectionDidChange(_ notification: Notification) {
-            updateText(notification)
+            // stringValue still holds the old text at this point; read the
+            // selected item instead.
+            guard let comboBox = notification.object as? NSComboBox,
+                let value = comboBox.objectValueOfSelectedItem as? String
+            else {
+                return
+            }
+            text = value
         }
 
         func controlTextDidEndEditing(_ notification: Notification) {
