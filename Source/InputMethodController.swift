@@ -961,6 +961,13 @@ extension McBopomofoInputMethodController {
 
         gCurrentCandidateController?.delegate = self
         gCurrentCandidateController?.reloadData()
+        if let state = state as? InputState.ChoosingPunctuationList,
+            let reading = state.candidates.first?.reading
+        {
+            // Start at the symbol of the punctuation key in the table.
+            gCurrentCandidateController?.selectedCandidateIndex =
+                LanguageModelManager.symbolInitialIndex(reading: reading)
+        }
         currentClient = client
 
         var lineHeightRect = NSMakeRect(0.0, 0.0, 16.0, 16.0)

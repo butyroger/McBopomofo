@@ -64,6 +64,8 @@ private class GridCandidateView: NSView {
     private(set) var cellWidth: CGFloat = 0
     private(set) var cellHeight: CGFloat = 0
     private(set) var keyLabelHeight: CGFloat = 0
+    /// The space above the candidates for the key labels.
+    private(set) var keyLabelSpace: CGFloat = 0
     private let padding: CGFloat = 3
 
     override var isFlipped: Bool { true }
@@ -81,10 +83,11 @@ private class GridCandidateView: NSView {
             ($0 as NSString).size(withAttributes: candidateAttrs).width
         }.max() ?? 0
         cellWidth = ceil(max(widest, candidateFont.pointSize) + padding + 1)
-        // The key labels are drawn small in the corners of the cells, so that
-        // the rows stay compact.
-        keyLabelHeight = ceil(keyLabelFont.pointSize * 1.1)
-        cellHeight = ceil(candidateFont.pointSize * 1.2)
+        // The key labels are drawn in the top left corners of the cells, and
+        // the candidates are moved down a little to make room for them.
+        keyLabelHeight = ceil(keyLabelFont.pointSize * 1.2)
+        keyLabelSpace = ceil(keyLabelHeight * 0.5)
+        cellHeight = ceil(candidateFont.pointSize * 1.2 + keyLabelSpace)
 
         let width = titleWidth + cellWidth * CGFloat(columnCount)
         let height = cellHeight * CGFloat(max(visibleRowCount, 1))
@@ -109,8 +112,7 @@ private class GridCandidateView: NSView {
             .paragraphStyle: paragraph,
         ]
         let keyLabelAttrs: [NSAttributedString.Key: Any] = [
-            .font: keyLabelFont, .foregroundColor: NSColor.secondaryLabelColor,
-            .paragraphStyle: paragraph,
+            .font: keyLabelFont, .foregroundColor: NSColor.labelColor.withAlphaComponent(0.85),
         ]
 
         let lastRow = min(firstVisibleRow + visibleRowCount, rows.count)
@@ -133,6 +135,8 @@ private class GridCandidateView: NSView {
 
             let isHighlightedRow =
                 highlightedIndex >= row.start && highlightedIndex < row.start + row.count
+            // The key labels start from the highlighted candidate, like GOING.
+            let firstLabeledColumn = isHighlightedRow ? Int(highlightedIndex - row.start) : 0
             for column in 0..<Int(row.count) {
                 let index = row.start + UInt(column)
                 let rect = cellRect(row: rowIndex, column: column)
@@ -143,20 +147,21 @@ private class GridCandidateView: NSView {
                         .fill()
                     attrs[.foregroundColor] = NSColor.white
                 }
-                if isHighlightedRow, column < keyLabels.count {
+                let labelColumn = column - firstLabeledColumn
+                if isHighlightedRow, labelColumn >= 0, labelColumn < keyLabels.count {
                     var labelAttrs = keyLabelAttrs
                     if index == highlightedIndex {
                         labelAttrs[.foregroundColor] = NSColor.white
                     }
-                    labelAttrs[.paragraphStyle] = nil
                     let labelRect = NSRect(
-                        x: rect.minX + 2, y: rect.minY, width: rect.width, height: keyLabelHeight)
-                    (keyLabels[column] as NSString).draw(in: labelRect, withAttributes: labelAttrs)
+                        x: rect.minX + 3, y: rect.minY + 1, width: rect.width, height: keyLabelHeight)
+                    (keyLabels[labelColumn] as NSString).draw(in: labelRect, withAttributes: labelAttrs)
                 }
                 let textHeight = ceil(candidateFont.ascender - candidateFont.descender)
                 let textRect = NSRect(
-                    x: rect.minX, y: rect.minY + (rect.height - textHeight) / 2, width: rect.width,
-                    height: textHeight)
+                    x: rect.minX,
+                    y: rect.minY + keyLabelSpace + (rect.height - keyLabelSpace - textHeight) / 2,
+                    width: rect.width, height: textHeight)
                 (candidates(index) as NSString).draw(in: textRect, withAttributes: attrs)
             }
         }
@@ -263,7 +268,8 @@ public class GridCandidateController: CandidateController {
         candidateView.candidateFont =
             NSFont(descriptor: candidateFont.fontDescriptor, size: symbolFontSize)
             ?? .systemFont(ofSize: symbolFontSize)
-        candidateView.keyLabelFont = .systemFont(ofSize: max(round(symbolFontSize * 0.4), 8))
+        candidateView.keyLabelFont = .systemFont(
+            ofSize: max(round(symbolFontSize * 0.5), 11), weight: .semibold)
         candidateView.titleFont = .systemFont(ofSize: max(round(symbolFontSize * 0.55), 11))
     }
 
@@ -413,13 +419,16 @@ public class GridCandidateController: CandidateController {
         moveHighlight(byRows: -1)
     }
 
-    /// The key labels apply to the row of the highlighted candidate.
+    /// The key labels apply to the row of the highlighted candidate, starting
+    /// from the highlighted candidate.
     override public func candidateIndexAtKeyLabelIndex(_ index: UInt) -> UInt {
-        guard let row = rowIndex(of: candidateView.highlightedIndex), index < rows[row].count
+        let highlighted = candidateView.highlightedIndex
+        guard let row = rowIndex(of: highlighted),
+            highlighted + index < rows[row].start + rows[row].count
         else {
             return UInt.max
         }
-        return rows[row].start + index
+        return highlighted + index
     }
 
     override public var selectedCandidateIndex: UInt {

@@ -53,6 +53,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// The titles and the counts, as [title, count] pairs, of the groups of the
 /// candidates of a "_symbols_" reading.
 + (NSArray<NSArray *> *)symbolSectionsForReading:(NSString *)reading NS_SWIFT_NAME(symbolSections(reading:));
++ (NSUInteger)symbolInitialIndexForReading:(NSString *)reading NS_SWIFT_NAME(symbolInitialIndex(reading:));
 @property (class, readonly, nonatomic) NSString *userPhrasesDataPathMcBopomofo;
 @property (class, readonly, nonatomic) NSString *userPhrasesDataPathPlainBopomofo;
 @property (class, readonly, nonatomic) NSString *excludedPhrasesDataPathMcBopomofo;

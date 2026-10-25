@@ -578,6 +578,11 @@ static void LTLoadVariantAnnotatorData()
     return sections;
 }
 
++ (NSUInteger)symbolInitialIndexForReading:(NSString *)reading
+{
+    return gLanguageModelMcBopomofo.getSymbolInitialIndex(reading.UTF8String);
+}
+
 + (NSString *)userPhrasesDataPathMcBopomofo
 {
     return [[self dataFolderPath] stringByAppendingPathComponent:@"data.txt"];

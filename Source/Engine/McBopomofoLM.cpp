@@ -270,9 +270,19 @@ std::vector<std::vector<std::string>> McBopomofoLM::getSymbolGroups(
   }
 
   if (!symbolTable_.empty()) {
+    // The symbols of the key that are in the table are not repeated in the
+    // first group; the grid highlights them in the table instead.
+    std::unordered_set<std::string> tableValues;
     for (const auto& category : symbolTable_) {
       groups.push_back(category.symbols);
+      tableValues.insert(category.symbols.begin(), category.symbols.end());
     }
+    auto& keySymbols = groups[0];
+    keySymbols.erase(std::remove_if(keySymbols.begin(), keySymbols.end(),
+                                    [&](const std::string& value) {
+                                      return tableValues.count(value) > 0;
+                                    }),
+                     keySymbols.end());
   } else if (hasUnigrams(kPunctuationListKey)) {
     std::vector<std::string> symbols;
     for (const auto& unigram : getUnigrams(kPunctuationListKey)) {
@@ -303,6 +313,27 @@ std::vector<std::pair<std::string, size_t>> McBopomofoLM::getSymbolSections(
     sections.emplace_back(title, groups[i].size());
   }
   return sections;
+}
+
+size_t McBopomofoLM::getSymbolInitialIndex(const std::string& key) {
+  if (key.rfind(kSymbolsKeyPrefix, 0) != 0) {
+    return 0;
+  }
+  std::string punctuationKey = key.substr(sizeof(kSymbolsKeyPrefix) - 1);
+  if (punctuationKey.empty() || !hasUnigrams(punctuationKey)) {
+    return 0;
+  }
+  std::string value = getUnigrams(punctuationKey).front().value();
+  size_t index = 0;
+  for (const auto& group : getSymbolGroups(punctuationKey)) {
+    for (const auto& symbol : group) {
+      if (symbol == value) {
+        return index;
+      }
+      ++index;
+    }
+  }
+  return 0;
 }
 
 bool McBopomofoLM::hasUnigrams(const std::string& key) {

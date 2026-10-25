@@ -94,7 +94,8 @@ class McBopomofoLM : public Formosa::Gramambular2::LanguageModel {
 
   // A key with this prefix followed by a punctuation key (for example,
   // "_symbols__punctuation_,") gives the unigrams of the punctuation key,
-  // then the symbols for the key pressed ("_punctuation_list_,"), and then
+  // then the symbols for the key pressed ("_punctuation_list_,"), except
+  // those already in the symbol table, and then
   // all symbols ("_punctuation_list"), so that the user can pick any symbol
   // from a punctuation that has been typed.
   static constexpr char kSymbolsKeyPrefix[] = "_symbols_";
@@ -114,6 +115,10 @@ class McBopomofoLM : public Formosa::Gramambular2::LanguageModel {
   // key pressed are titled with keySymbolsTitle.
   std::vector<std::pair<std::string, size_t>> getSymbolSections(
       const std::string& key, const std::string& keySymbolsTitle);
+
+  // Returns the index of the unigram of a "_symbols_" key to highlight first:
+  // the symbol that the punctuation key gives, or 0.
+  size_t getSymbolInitialIndex(const std::string& key);
 
   std::string getReading(const std::string& value) const;
 
