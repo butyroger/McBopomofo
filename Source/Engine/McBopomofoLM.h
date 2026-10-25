@@ -94,8 +94,8 @@ class McBopomofoLM : public Formosa::Gramambular2::LanguageModel {
 
   // A key with this prefix followed by a punctuation key (for example,
   // "_symbols__punctuation_,") gives the unigrams of the punctuation key,
-  // then the symbols for the key pressed ("_punctuation_list_,"), except
-  // those already in the symbol table, and then
+  // then the symbols for the key pressed ("_punctuation_list_,") if there is
+  // no symbol table, and then
   // all symbols ("_punctuation_list"), so that the user can pick any symbol
   // from a punctuation that has been typed.
   static constexpr char kSymbolsKeyPrefix[] = "_symbols_";

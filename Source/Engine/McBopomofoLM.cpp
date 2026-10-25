@@ -23,7 +23,6 @@
 
 #include "McBopomofoLM.h"
 
-#include <algorithm>
 #include <limits>
 #include <memory>
 #include <string>
@@ -270,19 +269,12 @@ std::vector<std::vector<std::string>> McBopomofoLM::getSymbolGroups(
   }
 
   if (!symbolTable_.empty()) {
-    // The symbols of the key that are in the table are not repeated in the
-    // first group; the grid highlights them in the table instead.
-    std::unordered_set<std::string> tableValues;
+    // With a symbol table, the symbols of the key are not listed on their
+    // own; the grid starts at the symbol of the key in the table instead.
+    groups[0].clear();
     for (const auto& category : symbolTable_) {
       groups.push_back(category.symbols);
-      tableValues.insert(category.symbols.begin(), category.symbols.end());
     }
-    auto& keySymbols = groups[0];
-    keySymbols.erase(std::remove_if(keySymbols.begin(), keySymbols.end(),
-                                    [&](const std::string& value) {
-                                      return tableValues.count(value) > 0;
-                                    }),
-                     keySymbols.end());
   } else if (hasUnigrams(kPunctuationListKey)) {
     std::vector<std::string> symbols;
     for (const auto& unigram : getUnigrams(kPunctuationListKey)) {

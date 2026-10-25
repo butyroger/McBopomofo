@@ -169,24 +169,19 @@ _punctuation_list_, ， 0.0
   // Only the list for "`".
   EXPECT_EQ(values("_symbols_"), (std::vector<std::string>{"　", "，", "★"}));
 
+  // With a symbol table, the symbols of the key are not listed on their own.
   lm.setSymbolTable({{"A", {"①", "②"}}, {"B", {"→"}}});
   EXPECT_EQ(values("_symbols__punctuation_,"),
-            (std::vector<std::string>{"，", "﹐", "①", "②", "→"}));
+            (std::vector<std::string>{"①", "②", "→"}));
   EXPECT_EQ(lm.getSymbolSections("_symbols__punctuation_,", "key"),
-            (std::vector<std::pair<std::string, size_t>>{
-                {"key", 2}, {"A", 2}, {"B", 1}}));
+            (std::vector<std::pair<std::string, size_t>>{{"A", 2}, {"B", 1}}));
   EXPECT_EQ(lm.getSymbolSections("_symbols_", "key"),
             (std::vector<std::pair<std::string, size_t>>{{"A", 2}, {"B", 1}}));
   EXPECT_EQ(lm.getSymbolInitialIndex("_symbols__punctuation_,"), 0);
 
-  // The symbols of the key in the table are not repeated, and the one the key
-  // gives is highlighted in the table.
+  // The symbol the key gives is highlighted in the table.
   lm.setSymbolTable({{"A", {"①", "，"}}});
-  EXPECT_EQ(values("_symbols__punctuation_,"),
-            (std::vector<std::string>{"﹐", "①", "，"}));
-  EXPECT_EQ(lm.getSymbolSections("_symbols__punctuation_,", "key"),
-            (std::vector<std::pair<std::string, size_t>>{{"key", 1}, {"A", 2}}));
-  EXPECT_EQ(lm.getSymbolInitialIndex("_symbols__punctuation_,"), 2);
+  EXPECT_EQ(lm.getSymbolInitialIndex("_symbols__punctuation_,"), 1);
   EXPECT_EQ(lm.getSymbolInitialIndex("_symbols_"), 0);
 
   // Not a punctuation.
