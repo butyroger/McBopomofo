@@ -49,6 +49,9 @@ private class GridCandidateView: NSView {
     var visibleRowCount: Int = 0
     var columnCount: Int = 9
     var highlightedIndex: UInt = 0
+    /// Whether the key labels of the rows are shown, for the first of the two
+    /// keys that pick a candidate.
+    var showsRowKeyLabels: Bool = true
     var keyLabels: [String] = []
     var candidates: (UInt) -> String = { _ in "" }
 
@@ -60,6 +63,7 @@ private class GridCandidateView: NSView {
     var action: Selector?
     var clickedIndex: UInt = .max
 
+    private(set) var rowKeyLabelWidth: CGFloat = 0
     private(set) var titleWidth: CGFloat = 0
     private(set) var cellWidth: CGFloat = 0
     private(set) var cellHeight: CGFloat = 0
@@ -78,6 +82,13 @@ private class GridCandidateView: NSView {
             titleWidth += padding * 2
         }
 
+        let keyLabelAttrs: [NSAttributedString.Key: Any] = [.font: keyLabelFont]
+        rowKeyLabelWidth = ceil(
+            keyLabels.map { ($0 as NSString).size(withAttributes: keyLabelAttrs).width }.max() ?? 0)
+        if rowKeyLabelWidth > 0 {
+            rowKeyLabelWidth += padding * 2
+        }
+
         let candidateAttrs: [NSAttributedString.Key: Any] = [.font: candidateFont]
         let widest = sampleCandidates.map {
             ($0 as NSString).size(withAttributes: candidateAttrs).width
@@ -89,14 +100,32 @@ private class GridCandidateView: NSView {
         keyLabelSpace = ceil(keyLabelHeight * 0.5)
         cellHeight = ceil(candidateFont.pointSize * 1.2 + keyLabelSpace)
 
-        let width = titleWidth + cellWidth * CGFloat(columnCount)
+        let width = leadingWidth + cellWidth * CGFloat(columnCount)
         let height = cellHeight * CGFloat(max(visibleRowCount, 1))
         return NSSize(width: width, height: height)
     }
 
+    /// The width of the row key labels and the titles before the cells.
+    var leadingWidth: CGFloat { rowKeyLabelWidth + titleWidth }
+
+    /// The rows labeled with the keys: from the highlighted row down, as many
+    /// as there are keys and are visible.
+    var rowKeyLabelRange: Range<Int> {
+        guard
+            let highlightedRow = rows.firstIndex(where: {
+                highlightedIndex >= $0.start && highlightedIndex < $0.start + $0.count
+            })
+        else {
+            return 0..<0
+        }
+        let end = min(
+            highlightedRow + keyLabels.count, firstVisibleRow + visibleRowCount, rows.count)
+        return highlightedRow..<max(end, highlightedRow)
+    }
+
     private func cellRect(row: Int, column: Int) -> NSRect {
         NSRect(
-            x: titleWidth + cellWidth * CGFloat(column),
+            x: leadingWidth + cellWidth * CGFloat(column),
             y: cellHeight * CGFloat(row - firstVisibleRow),
             width: cellWidth, height: cellHeight)
     }
@@ -116,6 +145,7 @@ private class GridCandidateView: NSView {
         ]
 
         let lastRow = min(firstVisibleRow + visibleRowCount, rows.count)
+        let rowKeyLabelRange = rowKeyLabelRange
         for rowIndex in firstVisibleRow..<lastRow {
             let row = rows[rowIndex]
             let rowRect = NSRect(
@@ -125,10 +155,18 @@ private class GridCandidateView: NSView {
                 NSColor.separatorColor.withAlphaComponent(0.5).setFill()
                 NSRect(x: 0, y: rowRect.minY, width: bounds.width, height: 1).fill()
             }
+            if showsRowKeyLabels, rowKeyLabelRange.contains(rowIndex) {
+                let labelHeight = ceil(keyLabelFont.ascender - keyLabelFont.descender)
+                let labelRect = NSRect(
+                    x: padding, y: rowRect.minY + (cellHeight - labelHeight) / 2,
+                    width: rowKeyLabelWidth - padding, height: labelHeight)
+                (keyLabels[rowIndex - rowKeyLabelRange.lowerBound] as NSString).draw(
+                    in: labelRect, withAttributes: keyLabelAttrs)
+            }
             if let title = row.title {
                 let titleHeight = ceil(titleFont.ascender - titleFont.descender)
                 let titleRect = NSRect(
-                    x: padding, y: rowRect.minY + (cellHeight - titleHeight) / 2,
+                    x: rowKeyLabelWidth + padding, y: rowRect.minY + (cellHeight - titleHeight) / 2,
                     width: titleWidth - padding, height: titleHeight)
                 (title as NSString).draw(in: titleRect, withAttributes: titleAttrs)
             }
@@ -136,7 +174,10 @@ private class GridCandidateView: NSView {
             let isHighlightedRow =
                 highlightedIndex >= row.start && highlightedIndex < row.start + row.count
             // The key labels start from the highlighted candidate, like GOING.
-            let firstLabeledColumn = isHighlightedRow ? Int(highlightedIndex - row.start) : 0
+            // While picking a row, they show what the second key picks after
+            // it, from the first candidate of the row.
+            let firstLabeledColumn =
+                isHighlightedRow && !showsRowKeyLabels ? Int(highlightedIndex - row.start) : 0
             for column in 0..<Int(row.count) {
                 let index = row.start + UInt(column)
                 let rect = cellRect(row: rowIndex, column: column)
@@ -150,6 +191,9 @@ private class GridCandidateView: NSView {
                 let labelColumn = column - firstLabeledColumn
                 if isHighlightedRow, labelColumn >= 0, labelColumn < keyLabels.count {
                     var labelAttrs = keyLabelAttrs
+                    if showsRowKeyLabels {
+                        labelAttrs[.foregroundColor] = NSColor.secondaryLabelColor
+                    }
                     if index == highlightedIndex {
                         labelAttrs[.foregroundColor] = NSColor.white
                     }
@@ -169,11 +213,11 @@ private class GridCandidateView: NSView {
 
     private func hitIndex(_ event: NSEvent) -> UInt? {
         let location = convert(event.locationInWindow, from: nil)
-        guard cellHeight > 0, cellWidth > 0, location.x >= titleWidth else {
+        guard cellHeight > 0, cellWidth > 0, location.x >= leadingWidth else {
             return nil
         }
         let rowIndex = firstVisibleRow + Int(location.y / cellHeight)
-        let column = Int((location.x - titleWidth) / cellWidth)
+        let column = Int((location.x - leadingWidth) / cellWidth)
         guard rowIndex >= 0, rowIndex < rows.count, column >= 0,
             column < Int(rows[rowIndex].count)
         else {
@@ -291,7 +335,7 @@ public class GridCandidateController: CandidateController {
         fittingRowCount = max(
             visibleRowCount,
             Int(screenHeight * maximumScreenHeightFraction / max(candidateView.cellHeight, 1)))
-        let available = screenWidth * maximumScreenWidthFraction - candidateView.titleWidth
+        let available = screenWidth * maximumScreenWidthFraction - candidateView.leadingWidth
         let fittingColumns = max(Int(available / max(candidateView.cellWidth, 1)), 1)
         let firstSectionColumns = Int(groups.prefix(2).map { $0.1 }.max() ?? 0)
         let maxColumns = UInt(
@@ -321,15 +365,19 @@ public class GridCandidateController: CandidateController {
             return
         }
         let highlightedRow = rowIndex(of: candidateView.highlightedIndex) ?? 0
-        // Keep the highlighted row visible, scrolling by pages.
+        // Keep the highlighted row and the rows labeled with the keys below it
+        // visible.
         let visible = max(fittingRowCount, 1)
-        if highlightedRow < candidateView.firstVisibleRow
-            || highlightedRow >= candidateView.firstVisibleRow + visible
-        {
-            candidateView.firstVisibleRow = (highlightedRow / visible) * visible
+        let labeledRows = min(max(keyLabels.count, 1), visible)
+        if highlightedRow < candidateView.firstVisibleRow {
+            candidateView.firstVisibleRow = highlightedRow
+        } else if highlightedRow + labeledRows > candidateView.firstVisibleRow + visible {
+            candidateView.firstVisibleRow = max(
+                0, min(highlightedRow + labeledRows - visible, rows.count - visible))
         }
 
         candidateView.rows = rows
+        candidateView.showsRowKeyLabels = isChoosingRow
         candidateView.columnCount = Int(columnCount)
         candidateView.visibleRowCount = min(visible, rows.count)
         candidateView.keyLabels = keyLabels.map { $0.displayedText }
@@ -357,6 +405,7 @@ public class GridCandidateController: CandidateController {
         guard index < candidateCount else {
             return false
         }
+        isChoosingRow = true
         candidateView.highlightedIndex = index
         layoutCandidateView()
         return true
@@ -384,6 +433,7 @@ public class GridCandidateController: CandidateController {
             }
         }
         buildRows()
+        isChoosingRow = true
         candidateView.highlightedIndex = 0
         candidateView.firstVisibleRow = 0
         layoutCandidateView()
@@ -417,6 +467,32 @@ public class GridCandidateController: CandidateController {
 
     @objc public func highlightCandidateInPreviousRow() -> Bool {
         moveHighlight(byRows: -1)
+    }
+
+    /// Picking a candidate with the keys takes two of them, like GOING: the
+    /// first one picks a row, and the second one a candidate in the row. The
+    /// labels of both start from the highlighted candidate.
+    @objc public private(set) var isChoosingRow: Bool = true
+
+    /// Moves the highlight to the first candidate in the row of the key label,
+    /// and waits for the key of the candidate.
+    @objc public func chooseRow(atKeyLabelIndex index: UInt) -> Bool {
+        candidateView.keyLabels = keyLabels.map { $0.displayedText }
+        let range = candidateView.rowKeyLabelRange
+        guard Int(index) < range.count,
+            moveHighlight(to: rows[range.lowerBound + Int(index)].start)
+        else {
+            return false
+        }
+        isChoosingRow = false
+        layoutCandidateView()
+        return true
+    }
+
+    /// Goes back to picking a row.
+    @objc public func cancelChoosingCandidateInRow() {
+        isChoosingRow = true
+        layoutCandidateView()
     }
 
     /// The key labels apply to the row of the highlighted candidate, starting

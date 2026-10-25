@@ -1659,7 +1659,30 @@ static const size_t kLearnPhraseThreshold = 2;
     }
 
 
-    if ([state isKindOfClass:[InputChoosingPunctuationList class]]) {
+    // In a grid, a candidate is picked with two keys: the first one picks a
+    // row, and the second one a candidate in that row.
+    NSInteger gridKeyLabelIndex = NSNotFound;
+    if ([gCurrentCandidateController isKindOfClass:[VTGridCandidateController class]]) {
+        VTGridCandidateController *grid = (VTGridCandidateController *)gCurrentCandidateController;
+        for (NSUInteger j = 0, c = grid.keyLabels.count; j < c; j++) {
+            if ([inputText compare:grid.keyLabels[j].key options:NSCaseInsensitiveSearch] == NSOrderedSame) {
+                gridKeyLabelIndex = j;
+                break;
+            }
+        }
+        if (gridKeyLabelIndex != NSNotFound && grid.isChoosingRow) {
+            if (![grid chooseRowAtKeyLabelIndex:gridKeyLabelIndex]) {
+                errorCallback();
+            }
+            return YES;
+        }
+        if (!grid.isChoosingRow && ((charCode == 8) || input.isDelete)) {
+            [grid cancelChoosingCandidateInRow];
+            return YES;
+        }
+    }
+
+    if ([state isKindOfClass:[InputChoosingPunctuationList class]] && gridKeyLabelIndex == NSNotFound) {
         if ([input.inputText isEqualToString:@"`"]) {
             if (Preferences.selectPhraseAfterCursorAsCandidate) {
                 _grid->deleteReadingAfterCursor();
