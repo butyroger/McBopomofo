@@ -640,6 +640,29 @@ static const size_t kLearnPhraseThreshold = 2;
     }
 }
 
+/// After "=" is typed at the end of an arithmetic expression, such as
+/// （2＋3）＊3＝, puts the result after it.
+- (void)_appendArithmeticResultAfterKey:(UniChar)charCode stateCallback:(void (^)(InputState *))stateCallback
+{
+    if (charCode != '=' || _inputMode != InputModeBopomofo || !_bpmfReadingBuffer->isEmpty()) {
+        return;
+    }
+    InputStateInputting *inputting = (InputStateInputting *)[self buildInputtingState];
+    NSString *buffer = inputting.composingBuffer;
+    NSUInteger cursor = MIN(inputting.cursorIndex, buffer.length);
+    if (cursor == 0) {
+        return;
+    }
+    // The text before the "=" just typed.
+    NSString *expression = [buffer substringToIndex:cursor - 1];
+    NSString *result = [QuickNumbers arithmeticResultEndingWith:expression];
+    if (result == nil) {
+        return;
+    }
+    [self _insertLiteralText:result];
+    stateCallback([self buildInputtingState]);
+}
+
 /// Replaces the English letters before the cursor with one reading whose
 /// candidates are the completions of the word, and lets the user pick one.
 - (BOOL)_enterEnglishCompletionWithInput:(KeyHandlerInput *)input stateCallback:(void (^)(InputState *))stateCallback
@@ -901,6 +924,7 @@ static const size_t kLearnPhraseThreshold = 2;
                 [self _setSmartEnglishMode:NO];
             }
             stateCallback([self buildInputtingState]);
+            [self _appendArithmeticResultAfterKey:charCode stateCallback:stateCallback];
             return YES;
         }
         // Tab lists the completions of the English word, such as associated
@@ -1337,12 +1361,14 @@ static const size_t kLearnPhraseThreshold = 2;
     std::string layout = [self _currentLayout];
     std::string customPunctuation = punctuationNamePrefix + layout + std::string(1, (char)charCode);
     if ([self _handlePunctuation:customPunctuation state:state usingVerticalMode:input.useVerticalMode stateCallback:stateCallback errorCallback:errorCallback]) {
+        [self _appendArithmeticResultAfterKey:charCode stateCallback:stateCallback];
         return YES;
     }
 
     // if nothing is matched, see if it's a punctuation key.
     std::string punctuation = punctuationNamePrefix + std::string(1, (char)charCode);
     if ([self _handlePunctuation:punctuation state:state usingVerticalMode:input.useVerticalMode stateCallback:stateCallback errorCallback:errorCallback]) {
+        [self _appendArithmeticResultAfterKey:charCode stateCallback:stateCallback];
         return YES;
     }
 
@@ -1365,6 +1391,16 @@ static const size_t kLearnPhraseThreshold = 2;
                 state = empty;
             }
         }
+    }
+
+    // A symbol key without a punctuation, such as "/" in the Hsu layout, puts
+    // the symbol itself, so that an expression like 10／2＝ can be typed.
+    if (_inputMode == InputModeBopomofo && _bpmfReadingBuffer->isEmpty() && charCode > 0x20 && charCode < 0x7f && !isalnum(charCode) && !input.isControlHold && !input.isCommandHold && !input.isOptionHold && ([state isKindOfClass:[InputStateNotEmpty class]] || [state isKindOfClass:[InputStateEmpty class]])) {
+        UniChar symbol = Preferences.halfWidthPunctuationEnabled ? charCode : (UniChar)(charCode + 0xfee0);
+        [self _insertLiteralText:[NSString stringWithCharacters:&symbol length:1]];
+        stateCallback([self buildInputtingState]);
+        [self _appendArithmeticResultAfterKey:charCode stateCallback:stateCallback];
+        return YES;
     }
 
     // still nothing, then we update the composing buffer (some app has

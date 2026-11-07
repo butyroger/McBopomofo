@@ -31,17 +31,49 @@ import Foundation
     private static let uppercaseDigits = Array("零壹貳參肆伍陸柒捌玖")
     private static let weekdays = ["日", "一", "二", "三", "四", "五", "六"]
 
+    /// Full-width digits and operators, typed in the Chinese mode, and their
+    /// half-width ones.
+    private static let halfWidth: [Character: Character] = {
+        var map: [Character: Character] = [
+            "（": "(", "）": ")", "＋": "+", "－": "-", "−": "-", "＊": "*", "×": "*",
+            "／": "/", "÷": "/", "．": ".", "：": ":", "＝": "=",
+        ]
+        for (full, half) in zip("０１２３４５６７８９", "0123456789") {
+            map[full] = half
+        }
+        return map
+    }()
+
+    private static func normalized(_ text: String) -> String {
+        var characters = text.map { halfWidth[$0] ?? $0 }
+        // "." typed between digits in the Chinese mode gives "。", like 3。5.
+        for i in characters.indices.dropFirst().dropLast()
+        where (characters[i] == "。" || characters[i] == "‧")
+            && characters[i - 1].isASCII && characters[i - 1].isNumber
+            && characters[i + 1].isASCII && characters[i + 1].isNumber
+        {
+            characters[i] = "."
+        }
+        return String(characters)
+    }
+
     /// Whether the code looks like a number, so that it is not a text template.
     @objc static func isNumberCode(_ code: String) -> Bool {
+        let code = normalized(code)
         guard let first = code.first, first.isASCII, first.isNumber || first == "(" else {
             return false
         }
-        return code.allSatisfy { $0.isASCII && ($0.isNumber || "./-:+*()".contains($0)) }
+        return code.allSatisfy { $0.isASCII && ($0.isNumber || "./-:+*()=".contains($0)) }
     }
 
     @objc static func candidates(for code: String) -> [String] {
         guard isNumberCode(code) else {
             return []
+        }
+        // An expression may end with "=", like (2+3)*3=.
+        var code = normalized(code)
+        while code.hasSuffix("=") {
+            code.removeLast()
         }
         var results = date(code) + time(code)
         if code.allSatisfy({ $0.isNumber || $0 == "." }) {
@@ -51,6 +83,25 @@ import Foundation
         }
         var seen = Set<String>()
         return results.filter { seen.insert($0).inserted }
+    }
+
+    /// The result of the arithmetic expression at the end of the text, such
+    /// as 15 for "我算（2＋3）＊3", or nil if there is none.
+    @objc(arithmeticResultEndingWith:) static func arithmeticResult(endingWith text: String) -> String? {
+        let characters = Array(normalized(text))
+        var start = characters.count
+        while start > 0, characters[start - 1].isASCII,
+            characters[start - 1].isNumber || "./-+*()".contains(characters[start - 1])
+        {
+            start -= 1
+        }
+        // The longest expression that makes sense, such as 2+3 in "(2+3".
+        for i in start..<characters.count {
+            if let value = Expression.evaluate(String(characters[i...])) {
+                return formatted(value)
+            }
+        }
+        return nil
     }
 
     // MARK: - Date
