@@ -23,6 +23,7 @@
 
 #include "McBopomofoLM.h"
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <string>
@@ -39,6 +40,13 @@ static constexpr double kMacroScore = -8.0;
 
 // The grid also asks for readings joined by "-", such as
 // "_literal_a-_literal_b", which are not a literal key.
+static bool isEnglishKey(const std::string& key) {
+  std::string word = key.substr(sizeof(McBopomofoLM::kEnglishKeyPrefix) - 1);
+  return !word.empty() && std::all_of(word.begin(), word.end(), [](char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+  });
+}
+
 static bool isLiteralKey(const std::string& key) {
   std::string text = key.substr(sizeof(McBopomofoLM::kLiteralKeyPrefix) - 1);
   return !text.empty() && (text == "-" || text.find('-') == std::string::npos);
@@ -149,6 +157,24 @@ McBopomofoLM::getUnigrams(const std::string& key) {
     return spaceUnigrams;
   }
 
+  if (key.rfind(kEnglishKeyPrefix, 0) == 0) {
+    std::vector<Formosa::Gramambular2::LanguageModel::Unigram> results;
+    if (!isEnglishKey(key)) {
+      return results;
+    }
+    std::string word = key.substr(sizeof(kEnglishKeyPrefix) - 1);
+    // The word itself comes first, so that the walk keeps what is typed.
+    results.emplace_back(word, 0);
+    if (englishCompletionProvider_) {
+      for (const auto& completion : englishCompletionProvider_(word)) {
+        if (completion != word) {
+          results.emplace_back(completion, -1);
+        }
+      }
+    }
+    return results;
+  }
+
   if (key.rfind(kLiteralKeyPrefix, 0) == 0) {
     std::vector<Formosa::Gramambular2::LanguageModel::Unigram> results;
     if (isLiteralKey(key)) {
@@ -190,6 +216,19 @@ McBopomofoLM::getUnigrams(const std::string& key) {
         userPhrases_.getUnigrams(key);
     userUnigrams = filterAndTransformUnigrams(rawUserUnigrams, excludedValues,
                                               insertedValues);
+  }
+
+  // Temporary phrases come after the user phrases, scored like them.
+  auto temporaryIt = temporaryPhrases_.find(key);
+  if (temporaryIt != temporaryPhrases_.end()) {
+    std::vector<Formosa::Gramambular2::LanguageModel::Unigram> rawUnigrams;
+    for (const auto& value : temporaryIt->second) {
+      rawUnigrams.emplace_back(value, 0);
+    }
+    auto temporaryUnigrams = filterAndTransformUnigrams(
+        rawUnigrams, excludedValues, insertedValues);
+    userUnigrams.insert(userUnigrams.end(), temporaryUnigrams.begin(),
+                        temporaryUnigrams.end());
   }
 
   if (languageModel_.hasUnigrams(key)) {
@@ -242,6 +281,16 @@ McBopomofoLM::getUnigrams(const std::string& key) {
   }
 
   return allUnigrams;
+}
+
+void McBopomofoLM::setEnglishCompletionProvider(
+    std::function<std::vector<std::string>(const std::string&)> provider) {
+  englishCompletionProvider_ = std::move(provider);
+}
+
+void McBopomofoLM::setTemporaryPhrases(
+    std::unordered_map<std::string, std::vector<std::string>> phrases) {
+  temporaryPhrases_ = std::move(phrases);
 }
 
 void McBopomofoLM::setSymbolTable(std::vector<SymbolCategory> symbolTable) {
@@ -350,6 +399,14 @@ bool McBopomofoLM::hasUnigrams(const std::string& key) {
 
   if (key.rfind(kLiteralKeyPrefix, 0) == 0) {
     return isLiteralKey(key);
+  }
+
+  if (key.rfind(kEnglishKeyPrefix, 0) == 0) {
+    return isEnglishKey(key);
+  }
+
+  if (temporaryPhrases_.count(key)) {
+    return true;
   }
 
   if (key.rfind(kSymbolsKeyPrefix, 0) == 0) {

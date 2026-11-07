@@ -342,7 +342,7 @@ class Preferences: NSObject {
     @objc static var showChineseEnglishModeIcon: Bool
 
     /// Shows "全" or "半" (full-width or half-width punctuation) in the menu bar.
-    @UserDefault(key: kShowFullHalfWidthModeIconKey, defaultValue: true)
+    @UserDefault(key: kShowFullHalfWidthModeIconKey, defaultValue: false)
     @objc static var showFullHalfWidthModeIcon: Bool
 
     @UserDefault(key: kChooseCandidateUsingSpaceKey, defaultValue: true)

@@ -60,6 +60,23 @@ static NSString *const kDefaultSymbolTable =
     @"標點\t　 ， 、 。 ． ‧ ； ： ？ ！ ︰ ⋯ ‥ … ｜ — ︴ ﹏ ＃ ＆ ＊ ※ § 〃 ＠ ～\n"
     @"括號\t（ ） 「 」 『 』 《 》 〈 〉 【 】 〔 〕 ｛ ｝ ︵ ︶ ﹁ ﹂ ﹃ ﹄ ︽ ︾ ︿ ﹀ ︻ ︼ ︷ ︸ ︹ ︺\n"
     @"標記\t○ ● ◎ ☆ ★ ◇ ◆ □ ■ △ ▲ ▽ ▼ ㊣ ♀ ♂ ✓ ✗ ⊙ ♠ ♥ ♦ ♣ ♪ ♫ ☎ ☞\n"
+    @"表情1\t😀 😃 😄 😁 😆 😅 🤣 😂 🙂 😉 😊 😇 🥰 😍 🤩 😘 😋 😛 😜 🤪\n"
+    @"表情2\t😝 🤗 🤭 🤫 🤔 😐 😑 😶 😏 😒 🙄 😬 😌 😔 😪 😴 😷 🤒 🤕 🥵\n"
+    @"表情3\t🥶 😵 🤯 🥳 😎 🤓 😕 😟 🙁 😮 😲 😳 🥺 😢 😭 😱 😤 😡\n"
+    @"手勢1\t👍 👎 👌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 👋 👏 🙌 👐 🤲\n"
+    @"手勢2\t🙏 🤝 💪 ✍️ 💅 👀 🧠 👶 🙋\n"
+    @"愛心1\t❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💋 🌹\n"
+    @"愛心2\t💐 🎁 🎉 🎊 🎈 🎂 ✨ ⭐ 🌟\n"
+    @"動植物1\t🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🐧 🐦 🐤 🦋\n"
+    @"動植物2\t🐝 🐞 🐢 🐟 🐳 🌸 🌷 🌻 🍀\n"
+    @"食物1\t🍎 🍊 🍋 🍌 🍉 🍇 🍓 🍒 🍑 🥭 🍍 🥝 🍅 🥑 🥦 🌽 🥕 🍞 🧀 🍳\n"
+    @"食物2\t🍔 🍟 🍕 🍜 🍣 🍱 🍰 🍩 ☕\n"
+    @"生活1\t🏠 🏢 🏥 🏪 🏫 🚗 🚕 🚌 🚲 🛵 🚄 ✈️ 🚢 📱 💻 ⌚ 📷 📞 ✉️ 📦\n"
+    @"生活2\t📝 📅 📌 📎 🔑 💡 💰 💳 🛒\n"
+    @"天氣1\t☀️ 🌤️ ⛅ ☁️ 🌧️ ⛈️ 🌩️ ❄️ ☃️ 🌈 🌙 ⭐ 🔥 💧 🌊 🌀 ⚡ 🌍 🌏 🎄\n"
+    @"天氣2\t🎃 🧧 🏮 🎆 🎇 🍾 🥂 🍻 🎵\n"
+    @"符號1\t✅ ❌ ⭕ ❗ ❓ ⚠️ 🚫 💯 🔴 🟠 🟡 🟢 🔵 🟣 ⚫ ⚪ 🆗 🆕 🆓 🔥\n"
+    @"符號2\t👉 ➡️ ⬅️ ⬆️ ⬇️ 🔝 🔜 ‼️ ⁉️\n"
     @"箭頭\t→ ← ↑ ↓ ↗ ↖ ↘ ↙ ⇒ ⇔ ↔ ↕\n"
     @"數學\t＋ － ± × ÷ ＝ ≠ ≒ ≡ ＜ ＞ ≦ ≧ ∞ √ ∴ ∵ ∠ ⊥ ∟ ⊿ ∩ ∪ ∫ ∼\n"
     @"單位\t％ ‰ ° ℃ ℉ ＄ ￥ ￡ € ￠ ㎜ ㎝ ㎞ ㎡ ㎎ ㎏ ㏄ ㏕ ㏎ ㎖ ㎗ ㎘\n"
@@ -71,6 +88,11 @@ static NSString *const kDefaultSymbolTable =
 
 static NSString *const kUserOverrideModelFolderName = @"learning";
 static NSString *const kUserOverrideModelDeviceIDKey = @"UserOverrideModelDeviceID";
+// Subfolders of the learning folder, so that their files are not taken as
+// user override models.
+static NSString *const kTemporaryPhrasesFolderName = @"temporary";
+static NSString *const kEnglishWordsFolderName = @"english";
+static const NSTimeInterval kTemporaryPhraseLifetime = 30 * 86400;
 
 @implementation LanguageModelManager
 
@@ -763,6 +785,128 @@ static BOOL gLocalUserOverrideModelFilePending = YES;
             gUserOverrideModel.deserialize(content.UTF8String, true);
         }
     }
+
+    [self _reloadTemporaryPhrases];
+}
+
+#pragma mark - Temporary phrases
+
+// "value reading" to the time it was picked, of this device and of all.
+static NSMutableDictionary<NSString *, NSNumber *> *gLocalTemporaryPhrases;
+static NSMutableDictionary<NSString *, NSNumber *> *gTemporaryPhrases;
+
++ (NSString *)englishWordsFolderPath
+{
+    return [[self userOverrideModelFolderPath] stringByAppendingPathComponent:kEnglishWordsFolderName];
+}
+
++ (NSString *)englishWordsDataPath
+{
+    return [[self englishWordsFolderPath] stringByAppendingPathComponent:[[self userOverrideModelDataPath] lastPathComponent]];
+}
+
++ (NSString *)_temporaryPhrasesDataPath
+{
+    NSString *folderPath = [[self userOverrideModelFolderPath] stringByAppendingPathComponent:kTemporaryPhrasesFolderName];
+    return [folderPath stringByAppendingPathComponent:[[self userOverrideModelDataPath] lastPathComponent]];
+}
+
+// Each line is the value, the reading and the time it was picked.
+static NSMutableDictionary<NSString *, NSNumber *> *LTReadTemporaryPhrases(NSString *path)
+{
+    NSMutableDictionary<NSString *, NSNumber *> *phrases = [NSMutableDictionary dictionary];
+    NSString *content = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil];
+    NSTimeInterval now = [NSDate date].timeIntervalSince1970;
+    for (NSString *line in [content componentsSeparatedByString:@"\n"]) {
+        NSArray<NSString *> *components = [line componentsSeparatedByString:@" "];
+        if (components.count != 3) {
+            continue;
+        }
+        NSTimeInterval timestamp = components[2].doubleValue;
+        if (now - timestamp > kTemporaryPhraseLifetime) {
+            continue;
+        }
+        phrases[[NSString stringWithFormat:@"%@ %@", components[0], components[1]]] = @(timestamp);
+    }
+    return phrases;
+}
+
++ (void)_reloadTemporaryPhrases
+{
+    NSString *localPath = [self _temporaryPhrasesDataPath];
+    if (gLocalTemporaryPhrases == nil) {
+        gLocalTemporaryPhrases = LTReadTemporaryPhrases(localPath);
+    }
+    gTemporaryPhrases = [gLocalTemporaryPhrases mutableCopy];
+    NSString *folderPath = [localPath stringByDeletingLastPathComponent];
+    for (NSString *filename in [[NSFileManager defaultManager] contentsOfDirectoryAtPath:folderPath error:nil]) {
+        if (![filename.pathExtension isEqualToString:@"txt"] || [filename isEqualToString:localPath.lastPathComponent]) {
+            continue;
+        }
+        NSDictionary *phrases = LTReadTemporaryPhrases([folderPath stringByAppendingPathComponent:filename]);
+        for (NSString *phrase in phrases) {
+            if ([gTemporaryPhrases[phrase] doubleValue] < [phrases[phrase] doubleValue]) {
+                gTemporaryPhrases[phrase] = phrases[phrase];
+            }
+        }
+    }
+    [self _applyTemporaryPhrases];
+}
+
++ (void)_applyTemporaryPhrases
+{
+    std::unordered_map<std::string, std::vector<std::string>> phrases;
+    for (NSString *phrase in gTemporaryPhrases) {
+        NSArray<NSString *> *components = [phrase componentsSeparatedByString:@" "];
+        if (components.count == 2) {
+            phrases[components[1].UTF8String].push_back(components[0].UTF8String);
+        }
+    }
+    gLanguageModelMcBopomofo.setTemporaryPhrases(std::move(phrases));
+}
+
++ (void)_saveTemporaryPhrases
+{
+    NSMutableString *content = [NSMutableString string];
+    for (NSString *phrase in gLocalTemporaryPhrases) {
+        [content appendFormat:@"%@ %.0f\n", phrase, gLocalTemporaryPhrases[phrase].doubleValue];
+    }
+    NSString *path = [self _temporaryPhrasesDataPath];
+    dispatch_async([self _userOverrideModelIOQueue], ^{
+        NSError *error = nil;
+        [[NSFileManager defaultManager] createDirectoryAtPath:[path stringByDeletingLastPathComponent] withIntermediateDirectories:YES attributes:nil error:nil];
+        if (![content writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
+            NSLog(@"Failed to save temporary phrases to %@: %@", path, error);
+        }
+    });
+}
+
++ (BOOL)isTemporaryPhrase:(NSString *)phrase
+{
+    [self userOverrideModel];
+    return gTemporaryPhrases[phrase] != nil;
+}
+
++ (void)addTemporaryPhrase:(NSString *)phrase
+{
+    [self userOverrideModel];
+    NSNumber *now = @([NSDate date].timeIntervalSince1970);
+    gLocalTemporaryPhrases[phrase] = now;
+    gTemporaryPhrases[phrase] = now;
+    [self _applyTemporaryPhrases];
+    [self _saveTemporaryPhrases];
+}
+
++ (void)removeTemporaryPhrase:(NSString *)phrase
+{
+    [self userOverrideModel];
+    if (gTemporaryPhrases[phrase] == nil) {
+        return;
+    }
+    [gLocalTemporaryPhrases removeObjectForKey:phrase];
+    [gTemporaryPhrases removeObjectForKey:phrase];
+    [self _applyTemporaryPhrases];
+    [self _saveTemporaryPhrases];
 }
 
 + (void)observeUserOverrideWithWalkBefore:(const Formosa::Gramambular2::ReadingGrid::WalkResult &)walkBefore walkAfter:(const Formosa::Gramambular2::ReadingGrid::WalkResult &)walkAfter cursor:(size_t)cursor

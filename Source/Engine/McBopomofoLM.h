@@ -29,6 +29,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -103,6 +104,17 @@ class McBopomofoLM : public Formosa::Gramambular2::LanguageModel {
   // A reading with this prefix stands for the text after the prefix as is,
   // such as an English letter typed in the middle of Chinese.
   static constexpr char kLiteralKeyPrefix[] = "_literal_";
+
+  // A reading with this prefix stands for an English word typed, and its
+  // candidates are the word itself and the completions of it.
+  static constexpr char kEnglishKeyPrefix[] = "_english_";
+  void setEnglishCompletionProvider(
+      std::function<std::vector<std::string>(const std::string&)> provider);
+
+  // Phrases the user has picked once. They win like user phrases, until they
+  // are typed again and become user phrases, or expire.
+  void setTemporaryPhrases(
+      std::unordered_map<std::string, std::vector<std::string>> phrases);
   static constexpr char kPunctuationListKey[] = "_punctuation_list";
 
   struct SymbolCategory {
@@ -206,6 +218,9 @@ class McBopomofoLM : public Formosa::Gramambular2::LanguageModel {
   std::function<std::string(const std::string&)> externalConverter_;
 
   std::function<std::string(const std::string&)> macroConverter_;
+  std::function<std::vector<std::string>(const std::string&)>
+      englishCompletionProvider_;
+  std::unordered_map<std::string, std::vector<std::string>> temporaryPhrases_;
 };
 
 }  // namespace McBopomofo

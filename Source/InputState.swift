@@ -304,7 +304,11 @@ class InputState: NSObject {
         }
 
         @objc public var composingBuffer: String {
-            "[\(NSLocalizedString("Text Templates", comment: ""))] \(code)"
+            let title =
+                QuickNumbers.isNumberCode(code)
+                ? NSLocalizedString("Quick Numbers", comment: "")
+                : NSLocalizedString("Text Templates", comment: "")
+            return "[\(title)] \(code)"
         }
 
         @objc var candidateCount: Int {
@@ -313,6 +317,9 @@ class InputState: NSObject {
 
         func candidate(at index: Int) -> String {
             let entry = entries[index]
+            if entry.code.isEmpty {
+                return entry.text
+            }
             var preview = entry.text.replacingOccurrences(of: "\n", with: "⏎")
             if preview.count > 30 {
                 preview = String(preview.prefix(30)) + "…"
@@ -347,6 +354,10 @@ class InputState: NSObject {
         /// The templates whose code starts with the typed code come first,
         /// then the ones that contain it in the code or the text.
         static func entries(matching code: String) -> [Entry] {
+            // A number, such as a date, an amount or 10*15/6, gives its formats.
+            if QuickNumbers.isNumberCode(code) {
+                return QuickNumbers.candidates(for: code).map { Entry(code: "", text: $0) }
+            }
             let all = loadEntries()
             if code.isEmpty {
                 return all

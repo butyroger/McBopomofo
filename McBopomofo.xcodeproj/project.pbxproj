@@ -60,6 +60,8 @@
 		D427F7B6279086F6004A2160 /* InputSourceHelper in Frameworks */ = {isa = PBXBuildFile; productRef = D427F7B5279086F6004A2160 /* InputSourceHelper */; };
 		D427F7C127908EFC004A2160 /* OpenCCBridge in Frameworks */ = {isa = PBXBuildFile; productRef = D427F7C027908EFC004A2160 /* OpenCCBridge */; };
 		D4314F0D2ED3690F0071DD71 /* NumberInputHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4314F0C2ED369090071DD71 /* NumberInputHelper.swift */; };
+		A1B2C3D40000000000000003 /* QuickNumbers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000004 /* QuickNumbers.swift */; };
+		A1B2C3D40000000000000001 /* EnglishWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000002 /* EnglishWords.swift */; };
 		D436E23F2CD20BA700C6155D /* AssociatedPhrasesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D436E23E2CD20B9E00C6155D /* AssociatedPhrasesTests.swift */; };
 		D43737C92DF9C35800D9707C /* InputMethodController+KeyHandlerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43737C82DF9C35100D9707C /* InputMethodController+KeyHandlerDelegate.swift */; };
 		D43737CB2DF9C48300D9707C /* InputMethodController+CandidateControllerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43737CA2DF9C48200D9707C /* InputMethodController+CandidateControllerDelegate.swift */; };
@@ -209,6 +211,8 @@
 		D427F7B2279086B5004A2160 /* InputSourceHelper */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = InputSourceHelper; path = Packages/InputSourceHelper; sourceTree = "<group>"; };
 		D427F7BF27908EAC004A2160 /* OpenCCBridge */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = OpenCCBridge; path = Packages/OpenCCBridge; sourceTree = "<group>"; };
 		D4314F0C2ED369090071DD71 /* NumberInputHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumberInputHelper.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000004 /* QuickNumbers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNumbers.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000002 /* EnglishWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnglishWords.swift; sourceTree = "<group>"; };
 		D436E23E2CD20B9E00C6155D /* AssociatedPhrasesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssociatedPhrasesTests.swift; sourceTree = "<group>"; };
 		D43737C82DF9C35100D9707C /* InputMethodController+KeyHandlerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "InputMethodController+KeyHandlerDelegate.swift"; sourceTree = "<group>"; };
 		D43737CA2DF9C48200D9707C /* InputMethodController+CandidateControllerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "InputMethodController+CandidateControllerDelegate.swift"; sourceTree = "<group>"; };
@@ -340,6 +344,8 @@
 				D456576D279E4F7B00DF6BC9 /* KeyHandlerInput.swift */,
 				D461B791279DAC010070E734 /* InputState.swift */,
 				D4314F0C2ED369090071DD71 /* NumberInputHelper.swift */,
+				A1B2C3D40000000000000004 /* QuickNumbers.swift */,
+				A1B2C3D40000000000000002 /* EnglishWords.swift */,
 				D427F76B278CA1BA004A2160 /* AppDelegate.swift */,
 				D44FB74427915555003C80A6 /* Preferences.swift */,
 				D47F7DCF278C0897002F9DD7 /* NonModalAlertWindowController.swift */,
@@ -744,6 +750,8 @@
 				6A660A702EAF371000D53D7B /* ByteBlockBackedDictionary.cpp in Sources */,
 				6A833E522F0A0FB30086AD0C /* VariantAnnotator.cpp in Sources */,
 				D4314F0D2ED3690F0071DD71 /* NumberInputHelper.swift in Sources */,
+				A1B2C3D40000000000000003 /* QuickNumbers.swift in Sources */,
+				A1B2C3D40000000000000001 /* EnglishWords.swift in Sources */,
 				D4E569DC27A34D0E00AC2CEF /* KeyHandler.mm in Sources */,
 				6A4F5F982879E838008C4307 /* reading_grid.cpp in Sources */,
 				D47F7DD0278C0897002F9DD7 /* NonModalAlertWindowController.swift in Sources */,

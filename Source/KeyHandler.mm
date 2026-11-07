@@ -77,6 +77,10 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
     // the composing buffer as is, until a space, a symbol or Backspace.
     BOOL _smartEnglishMode;
     BOOL _smartEnglishDigitsOnly;
+
+    // Phrases picked in this composition, as "value reading", which have
+    // just become temporary phrases and are not typed again yet.
+    NSMutableSet<NSString *> *_phrasesPickedInComposition;
 }
 
 @synthesize delegate = _delegate;
@@ -146,6 +150,17 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
         std::shared_ptr<Formosa::Gramambular2::LanguageModel> lm(_emptySharedPtr, _languageModel);
         _grid = new Formosa::Gramambular2::ReadingGrid(lm);
         _grid->setReadingSeparator("-");
+
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            [LanguageModelManager languageModelMcBopomofo]->setEnglishCompletionProvider([](const std::string &word) {
+                std::vector<std::string> completions;
+                for (NSString *completion in [EnglishWords completionsFor:@(word.c_str())]) {
+                    completions.push_back(completion.UTF8String);
+                }
+                return completions;
+            });
+        });
 
         _inputMode = InputModeBopomofo;
     }
@@ -298,8 +313,10 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
         }
         return YES;
     }
-    // Shift + a candidate key selects the candidate.
-    if (input.isShiftHold) {
+    // Shift + a candidate key selects the candidate, except for the operators
+    // of a number, such as * for Shift + 8.
+    BOOL isNumberOperator = [QuickNumbers isNumberCode:templateState.code] && charCode < 0x80 && strchr("*()+:", (char)charCode) && charCode != 0;
+    if (input.isShiftHold && !isNumberOperator) {
         VTCandidateController *gCurrentCandidateController = [self.delegate candidateControllerForKeyHandler:self];
         for (VTCandidateKeyLabel *label in gCurrentCandidateController.keyLabels) {
             if ([input.inputTextIgnoringModifiers compare:label.key options:NSCaseInsensitiveSearch] == NSOrderedSame) {
@@ -317,6 +334,61 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
         return YES;
     }
     return NO;
+}
+
+- (void)_addTemporaryPhrase:(NSString *)phrase
+{
+    if (_phrasesPickedInComposition == nil) {
+        _phrasesPickedInComposition = [NSMutableSet set];
+    }
+    [_phrasesPickedInComposition addObject:phrase];
+    [LanguageModelManager addTemporaryPhrase:phrase];
+}
+
+// Called before the composing buffer is committed. A temporary phrase typed
+// again, not just picked in this composition, becomes a user phrase. English
+// words typed are remembered for the completions.
+- (void)_learnFromCommittedComposition
+{
+    if (_inputMode != InputModeBopomofo) {
+        return;
+    }
+    NSMutableArray<NSString *> *englishWords = [NSMutableArray array];
+    NSMutableString *word = [NSMutableString string];
+    for (const auto &node : _latestWalk.nodes) {
+        const std::string &reading = node->reading();
+        NSString *value = @(node->currentUnigram().value().c_str());
+        BOOL isLetter = value.length == 1 && [[NSCharacterSet letterCharacterSet] characterIsMember:[value characterAtIndex:0]] && [value characterAtIndex:0] < 0x80;
+        if (reading.rfind(McBopomofo::McBopomofoLM::kLiteralKeyPrefix, 0) == 0 && isLetter) {
+            [word appendString:value];
+            continue;
+        }
+        if (reading.rfind(McBopomofo::McBopomofoLM::kEnglishKeyPrefix, 0) == 0) {
+            [word appendString:value];
+            continue;
+        }
+        if (word.length) {
+            [englishWords addObject:[word copy]];
+            [word setString:@""];
+        }
+        if (node->spanningLength() < 2 || reading.empty() || reading[0] == '_') {
+            continue;
+        }
+        NSString *phrase = [NSString stringWithFormat:@"%@ %@", value, @(reading.c_str())];
+        if ([_phrasesPickedInComposition containsObject:phrase] || ![LanguageModelManager isTemporaryPhrase:phrase]) {
+            continue;
+        }
+        [LanguageModelManager removeTemporaryPhrase:phrase];
+        if ([LanguageModelManager learnUserPhrase:phrase] && [self.delegate respondsToSelector:@selector(keyHandler:didLearnPhrase:reading:)]) {
+            [self.delegate keyHandler:self didLearnPhrase:value reading:@(reading.c_str())];
+        }
+    }
+    if (word.length) {
+        [englishWords addObject:[word copy]];
+    }
+    if (englishWords.count) {
+        [EnglishWords record:englishWords];
+    }
 }
 
 // Turns a multi-character phrase into a user phrase once the user has picked
@@ -344,11 +416,14 @@ static const size_t kLearnPhraseThreshold = 2;
         return;
     }
 
+    NSString *phrase = [NSString stringWithFormat:@"%@ %@", value, reading];
     if (_userOverrideModel->candidateObservationCount(unigram.value()) < kLearnPhraseThreshold) {
+        [self _addTemporaryPhrase:phrase];
         return;
     }
 
-    if (![LanguageModelManager learnUserPhrase:[NSString stringWithFormat:@"%@ %@", value, reading]]) {
+    [LanguageModelManager removeTemporaryPhrase:phrase];
+    if (![LanguageModelManager learnUserPhrase:phrase]) {
         return;
     }
     if ([self.delegate respondsToSelector:@selector(keyHandler:didLearnPhrase:reading:)]) {
@@ -378,10 +453,6 @@ static const size_t kLearnPhraseThreshold = 2;
     }
     size_t phraseStart = phraseEnd - phraseLength;
 
-    if (_userOverrideModel->observationCount(_latestWalk, cursor, node->currentUnigram().value()) < kLearnPhraseThreshold) {
-        return;
-    }
-
     // Collect the nodes that now cover the span of the old phrase.
     NSMutableString *value = [NSMutableString string];
     NSMutableArray<NSString *> *readings = [NSMutableArray array];
@@ -410,7 +481,14 @@ static const size_t kLearnPhraseThreshold = 2;
     }
 
     NSString *reading = [readings componentsJoinedByString:@"-"];
-    if (![LanguageModelManager learnUserPhrase:[NSString stringWithFormat:@"%@ %@", value, reading]]) {
+    NSString *phrase = [NSString stringWithFormat:@"%@ %@", value, reading];
+    if (_userOverrideModel->observationCount(_latestWalk, cursor, node->currentUnigram().value()) < kLearnPhraseThreshold) {
+        [self _addTemporaryPhrase:phrase];
+        return;
+    }
+
+    [LanguageModelManager removeTemporaryPhrase:phrase];
+    if (![LanguageModelManager learnUserPhrase:phrase]) {
         return;
     }
     if ([self.delegate respondsToSelector:@selector(keyHandler:didLearnPhrase:reading:)]) {
@@ -562,6 +640,47 @@ static const size_t kLearnPhraseThreshold = 2;
     }
 }
 
+/// Replaces the English letters before the cursor with one reading whose
+/// candidates are the completions of the word, and lets the user pick one.
+- (BOOL)_enterEnglishCompletionWithInput:(KeyHandlerInput *)input stateCallback:(void (^)(InputState *))stateCallback
+{
+    const std::string prefix = McBopomofo::McBopomofoLM::kLiteralKeyPrefix;
+    const auto &readings = _grid->readings();
+    size_t cursor = _grid->cursor();
+    size_t start = cursor;
+    while (start > 0) {
+        const std::string &reading = readings[start - 1];
+        if (reading.size() != prefix.size() + 1 || reading.rfind(prefix, 0) != 0 || !isalpha((unsigned char)reading.back())) {
+            break;
+        }
+        start--;
+    }
+    if (cursor - start < 2) {
+        return NO;
+    }
+    std::string word;
+    for (size_t i = start; i < cursor; i++) {
+        word += readings[i].back();
+    }
+    std::string key = std::string(McBopomofo::McBopomofoLM::kEnglishKeyPrefix) + word;
+    if (_languageModel->getUnigrams(key).size() < 2) {
+        return NO;
+    }
+    for (size_t i = start; i < cursor; i++) {
+        _grid->deleteReadingBeforeCursor();
+    }
+    _grid->insertReading(key);
+    [self _walk];
+    size_t originalCursorIndex = _grid->cursor();
+    if (Preferences.selectPhraseAfterCursorAsCandidate) {
+        _grid->setCursor(originalCursorIndex - 1);
+    }
+    InputStateChoosingCandidate *choosingCandidate = [self _buildCandidateStateFromInputtingState:(InputStateInputting *)[self buildInputtingState] useVerticalMode:input.useVerticalMode];
+    choosingCandidate.originalCursorIndex = originalCursorIndex;
+    stateCallback(choosingCandidate);
+    return YES;
+}
+
 /// Turns the unfinished reading into English and starts the English mode
 /// with the text.
 - (void)_switchToSmartEnglishWithText:(const std::string &)text
@@ -580,6 +699,7 @@ static const size_t kLearnPhraseThreshold = 2;
 - (void)clear
 {
     [self _setSmartEnglishMode:NO];
+    [_phrasesPickedInComposition removeAllObjects];
     _readingBeforeSymbolTable.clear();
     _bpmfReadingBuffer->clear();
     _grid->clear();
@@ -596,6 +716,7 @@ static const size_t kLearnPhraseThreshold = 2;
     // Upon force-commit, clear the BPMF reading, then "steal" the composing buffer text from the built inputting state.
     _bpmfReadingBuffer->clear();
     InputStateInputting *inputting = (InputStateInputting *)[self buildInputtingState];
+    [self _learnFromCommittedComposition];
     [self clear];
 
     InputStateCommitting *committing = [[InputStateCommitting alloc] initWithPoppedText:inputting.composingBuffer];
@@ -782,9 +903,30 @@ static const size_t kLearnPhraseThreshold = 2;
             stateCallback([self buildInputtingState]);
             return YES;
         }
+        // Tab lists the completions of the English word, such as associated
+        // for "ass".
+        if (input.isTab && !input.isShiftHold) {
+            if (![self _enterEnglishCompletionWithInput:input stateCallback:stateCallback]) {
+                errorCallback();
+            }
+            return YES;
+        }
         // Backspace, Enter, Esc and so on are handled as usual.
         [self _setSmartEnglishMode:NO];
     } else if (smartSwitching) {
+        // Tab after an unfinished reading takes the keys as English, and lists
+        // the completions, like "hel" (ㄏㄧㄥ in Hsu) and Tab for hello.
+        if (input.isTab && !input.isShiftHold && !_bpmfReadingBuffer->isEmpty()) {
+            std::string keys = [self _rawKeysOfCurrentReading];
+            if (std::all_of(keys.begin(), keys.end(), [](char c) { return isalpha((unsigned char)c); })) {
+                [self _switchToSmartEnglishWithText:keys];
+                if (![self _enterEnglishCompletionWithInput:input stateCallback:stateCallback]) {
+                    stateCallback([self buildInputtingState]);
+                }
+                return YES;
+            }
+        }
+
         // An uppercase letter starts English, like "ChatGPT".
         BOOL isUppercaseLetter = charCode >= 'A' && charCode <= 'Z';
         if (isUppercaseLetter && !Preferences.switchInputSourceUponShiftLetterKeyComboEnabled && Preferences.letterBehavior == 0) {
@@ -988,6 +1130,7 @@ static const size_t kLearnPhraseThreshold = 2;
                         InputStateCommitting *committing = [[InputStateCommitting alloc] initWithPoppedText:composingBuffer];
                         stateCallback(committing);
                     }
+                    [self _learnFromCommittedComposition];
                     [self clear];
                     InputStateCommitting *committing = [[InputStateCommitting alloc] initWithPoppedText:@" "];
                     stateCallback(committing);
@@ -1146,6 +1289,7 @@ static const size_t kLearnPhraseThreshold = 2;
         if (_inputMode == InputModeBopomofo) {
             [InputStateTextTemplate createSampleFileIfNeeded];
             if ([state isKindOfClass:[InputStateInputting class]]) {
+                [self _learnFromCommittedComposition];
                 InputStateCommitting *committing = [[InputStateCommitting alloc] initWithPoppedText:((InputStateInputting *)state).composingBuffer];
                 stateCallback(committing);
             }
@@ -1648,6 +1792,7 @@ static const size_t kLearnPhraseThreshold = 2;
         return NO;
     }
 
+    [self _learnFromCommittedComposition];
     [self clear];
 
     InputStateInputting *current = (InputStateInputting *)state;

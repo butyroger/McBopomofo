@@ -44,6 +44,17 @@ NS_ASSUME_NONNULL_BEGIN
 /// the other devices sharing the user phrase folder.
 + (void)reloadUserOverrideModel;
 
+/// Temporary phrases, as "value reading": phrases the user has picked once.
+/// They win like user phrases for 30 days since picked, or until they are
+/// typed again and become user phrases.
++ (BOOL)isTemporaryPhrase:(NSString *)phrase;
++ (void)addTemporaryPhrase:(NSString *)phrase;
++ (void)removeTemporaryPhrase:(NSString *)phrase;
+
+/// Learned English words, as a folder for each device to write its own file.
+@property (class, readonly, nonatomic) NSString *englishWordsFolderPath;
+@property (class, readonly, nonatomic) NSString *englishWordsDataPath;
+
 @property (class, readonly, nonatomic) NSString *dataFolderPath;
 @property (class, readonly, nonatomic) NSString *userOverrideModelFolderPath;
 @property (class, readonly, nonatomic) NSString *symbolTableDataPath;
