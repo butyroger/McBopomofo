@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小麥注音使用說明</title>
+<style>
+:root {
+  --bg: #fbfaf7;
+  --fg: #1f2328;
+  --muted: #5f6670;
+  --line: #e3e0d8;
+  --card: #ffffff;
+  --accent: #1d5fa8;
+  --key-bg: #f1efe9;
+  --key-border: #c9c4b8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1c1f;
+    --fg: #e8e6e1;
+    --muted: #9ea3aa;
+    --line: #34363b;
+    --card: #232428;
+    --accent: #6ea8ec;
+    --key-bg: #2d2f34;
+    --key-border: #4a4d54;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.75 -apple-system, "PingFang TC", "Heiti TC", sans-serif;
+}
+.layout { display: flex; max-width: 1080px; margin: 0 auto; }
+nav {
+  position: sticky; top: 0; align-self: flex-start;
+  width: 220px; flex-shrink: 0; height: 100vh; overflow-y: auto;
+  padding: 32px 16px 32px 24px; border-right: 1px solid var(--line);
+  font-size: 14px;
+}
+nav h2 { font-size: 13px; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+nav a { display: block; color: var(--fg); text-decoration: none; padding: 3px 0; }
+nav a:hover { color: var(--accent); }
+main { flex: 1; min-width: 0; padding: 32px 40px 80px; }
+h1 { font-size: 30px; margin: 0 0 4px; }
+.subtitle { color: var(--muted); margin: 0 0 32px; }
+section { border-top: 1px solid var(--line); padding-top: 24px; margin-top: 32px; }
+h2 { font-size: 22px; margin: 0 0 12px; }
+h3 { font-size: 17px; margin: 20px 0 6px; }
+p { margin: 8px 0; }
+ul { padding-left: 1.3em; margin: 8px 0; }
+li { margin: 4px 0; }
+kbd {
+  display: inline-block; min-width: 1.6em; padding: 0 6px; text-align: center;
+  font: 13px/1.6 ui-monospace, Menlo, monospace;
+  background: var(--key-bg); border: 1px solid var(--key-border);
+  border-bottom-width: 2px; border-radius: 5px;
+}
+code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); padding: 1px 5px; border-radius: 4px; }
+.examples { display: grid; gap: 8px; margin: 12px 0; }
+.example {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px;
+}
+.example .in { font: 14px ui-monospace, Menlo, monospace; color: var(--muted); min-width: 11em; }
+.example .out { font-size: 17px; }
+.note {
+  background: var(--card); border-left: 3px solid var(--accent);
+  padding: 8px 14px; margin: 12px 0; border-radius: 0 6px 6px 0; color: var(--muted);
+}
+@media (max-width: 760px) {
+  .layout { display: block; }
+  nav { position: static; width: auto; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 16px; }
+  main { padding: 24px 16px 60px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <h2>目錄</h2>
+  <a href="#basic">基本操作</a>
+  <a href="#smart-switch">智慧中英切換</a>
+  <a href="#english">英文聯想</a>
+  <a href="#numbers">數字與算式</a>
+  <a href="#templates">文字範本</a>
+  <a href="#symbols">符號表與 emoji</a>
+  <a href="#learning">自動學習</a>
+  <a href="#mode">中英提示與模式圖示</a>
+  <a href="#settings">偏好設定</a>
+  <a href="#files">詞庫檔案</a>
+  <a href="#shortcuts">快速鍵一覽</a>
+</nav>
+<main>
+<h1>小麥注音使用說明</h1>
+<p class="subtitle">智慧學習版。從輸入法選單的「使用說明」可以再次開啟本頁。</p>
+
+<section id="basic">
+<h2>基本操作</h2>
+<ul>
+  <li>打注音、按聲調（一聲按 <kbd>空白</kbd>）就會組字，打完一句按 <kbd>Enter</kbd> 送出。</li>
+  <li>選字：游標停在要改的字上，按 <kbd>空白</kbd> 或 <kbd>↓</kbd> 開啟候選字，按選字鍵選字。</li>
+  <li>輸入法選單最上方可以直接切換「注音－標準鍵盤」與「注音－許氏鍵盤」。</li>
+  <li>許氏鍵盤的數字鍵不是注音，打中文時直接按數字，數字會跟中文一起留在組字區。</li>
+  <li><kbd>Caps Lock</kbd> 打開時打出的是小寫英文，關掉回到注音。</li>
+</ul>
+</section>
+
+<section id="smart-switch">
+<h2>智慧中英切換</h2>
+<p>不用按 <kbd>Shift</kbd> 或 <kbd>Caps Lock</kbd> 也能中英數混打：打的鍵組不成注音時，會自動變成英文。</p>
+<div class="examples">
+  <div class="example"><span class="in">你用過這個 app?</span><span class="out">你用過這個app?</span></div>
+  <div class="example"><span class="in">ChatGPT 很好用</span><span class="out">ChatGPT 很好用</span></div>
+  <div class="example"><span class="in">2026 年</span><span class="out">2026年</span></div>
+  <div class="example"><span class="in">ok?</span><span class="out">ok?</span></div>
+</div>
+<h3>什麼時候變成英文</h3>
+<ul>
+  <li>同一個注音位置又按了一次，例如 <code>app</code>（ㄇㄣ 之後又按 ㄣ）。</li>
+  <li>組出來的注音不是字，例如 <code>you</code> 加空白（ㄗㄧㄟ 不是字）。</li>
+  <li>按大寫字母，直接開始英文，例如 <code>ChatGPT</code>。</li>
+  <li>注音還沒打完就接數字或符號，例如 <code>ok?</code>。</li>
+</ul>
+<h3>回到中文</h3>
+<ul>
+  <li>按 <kbd>空白</kbd>、任何符號或 <kbd>Backspace</kbd> 就回到中文。</li>
+  <li>只打了數字時，空白只會回到中文、不插入空白，所以 <code>2026</code> 空白 <code>年</code> 會是「2026年」。</li>
+  <li>英文和中文一起留在組字區，按 <kbd>Enter</kbd> 一起送出。</li>
+</ul>
+<p class="note">很短的英文可能剛好是合法注音，例如許氏鍵盤的 <code>a</code> 加空白會打成「疵」，這時請改用 <kbd>Shift</kbd> 或 <kbd>Caps Lock</kbd>。本功能可在偏好設定關閉。</p>
+</section>
+
+<section id="english">
+<h2>英文聯想</h2>
+<p>打英文時（或注音還沒打完時）按 <kbd>Tab</kbd>，列出英文單字補完，按選字鍵選。</p>
+<div class="examples">
+  <div class="example"><span class="in">ass <kbd>Tab</kbd></span><span class="out">ass、assuming、assume、assistant、associate…</span></div>
+  <div class="example"><span class="in">hel <kbd>Tab</kbd></span><span class="out">hel、hello、help、helpful…</span></div>
+</div>
+<ul>
+  <li>清單第一個是原本打的字，選它等於不改。</li>
+  <li>打過兩次以上的英文字會排在最前面，例如 ChatGPT。</li>
+  <li>跳著打也找得到打過的字，例如 <code>aocd</code> 找到 associated。</li>
+</ul>
+</section>
+
+<section id="numbers">
+<h2>數字與算式</h2>
+<h3>數字快打</h3>
+<p>按 <kbd>`</kbd> 後輸入數字，列出各種格式，按選字鍵或 <kbd>Enter</kbd> 送出。</p>
+<div class="examples">
+  <div class="example"><span class="in">` 2023.09.07</span><span class="out">2023年9月7日（星期四）、二〇二三年九月七日、中華民國112年9月7日、2023/09/07…</span></div>
+  <div class="example"><span class="in">` 112.9.7</span><span class="out">民國年也可以，同上</span></div>
+  <div class="example"><span class="in">` 12:30</span><span class="out">12時30分、下午十二點三十分、下午12點30分、12:30 PM…</span></div>
+  <div class="example"><span class="in">` 6548</span><span class="out">6,548、陸仟伍佰肆拾捌元整、六千五百四十八、6,548元…</span></div>
+  <div class="example"><span class="in">` 10*15/6</span><span class="out">25、10*15/6=25、10×15÷6=25、貳拾伍元整…</span></div>
+</div>
+<h3>中文模式直接算</h3>
+<p>在組字區打算式再按 <kbd>=</kbd>，答案會自動接在後面。全形、半形運算子都可以，數字中間的「。」當小數點。</p>
+<div class="examples">
+  <div class="example"><span class="in">(2+3)*3=</span><span class="out">（2＋3）＊3＝15</span></div>
+  <div class="example"><span class="in">3.5*2=</span><span class="out">3。5＊2＝7</span></div>
+</div>
+</section>
+
+<section id="templates">
+<h2>文字範本</h2>
+<ul>
+  <li>按 <kbd>`</kbd> 後輸入代碼，例如地址、帳號等常用文字，按選字鍵或 <kbd>Enter</kbd> 送出。</li>
+  <li>範本放在詞庫資料夾的 <code>text-templates.txt</code>，一行一筆：代碼、Tab、內容，內容要換行請寫 <code>\n</code>。</li>
+  <li>從輸入法選單「編輯文字範本」開啟編輯。</li>
+</ul>
+</section>
+
+<section id="symbols">
+<h2>符號表與 emoji</h2>
+<ul>
+  <li>按兩次 <kbd>`</kbd>（或在範本中再按一次 <kbd>`</kbd>）開啟分類符號表。</li>
+  <li>打完標點按 <kbd>空白</kbd> 或 <kbd>↓</kbd>，也會開啟符號表，反白停在剛打的標點。</li>
+  <li>兩鍵選符號：第一鍵選列（左側標示），第二鍵選格；按 <kbd>Backspace</kbd> 回到選列。</li>
+  <li>內建表情、手勢、愛心、動植物、食物、生活、天氣、符號等 emoji 分類。</li>
+  <li>符號表放在 <code>symbol-table.txt</code>，一行一類：分類名稱、Tab、以空白分隔的符號；從選單「編輯符號表」開啟。</li>
+</ul>
+</section>
+
+<section id="learning">
+<h2>自動學習</h2>
+<ul>
+  <li><b>選字記憶</b>：選過的字會記住前後文，下次同樣的句子優先出現。</li>
+  <li><b>暫存詞</b>：兩個字以上的詞手動選過 1 次，就收進暫存詞，不分前後文都優先出現；30 天沒再用到會自動清除。</li>
+  <li><b>個人詞庫</b>：暫存詞之後再打出來送出一次，就寫進個人詞庫（<code>data.txt</code>），永久生效。</li>
+  <li><b>拆詞學習</b>：內建詞被拆開改字，例如「許是」改成「許氏」，同樣選兩次後會把新詞記下來。</li>
+  <li>學習資料存在詞庫資料夾的 <code>learning/</code>，詞庫放在 iCloud 雲碟時，多台 Mac 共用並合併。</li>
+  <li>不想要的詞可以從選單「編輯要排除的詞彙」排除，排除後不會再被自動加回來。</li>
+</ul>
+</section>
+
+<section id="mode">
+<h2>中英提示與模式圖示</h2>
+<ul>
+  <li><b>中英切換提醒</b>：按 <kbd>Caps Lock</kbd>，或在小麥與其他輸入法之間切換時，螢幕右上角會短暫顯示「ABC」或「中文」。</li>
+  <li><b>模式狀態顯示</b>：使用小麥時，選單列顯示「中／英」（Caps Lock 或智慧切換的英文模式時為「英」），也可以另外顯示「全／半」形標點，點一下切換。</li>
+</ul>
+</section>
+
+<section id="settings">
+<h2>偏好設定</h2>
+<p>從輸入法選單「小麥注音偏好設定」開啟。本版新增的項目：</p>
+<ul>
+  <li><b>面板主題</b>：候選字面板與符號表跟隨系統、淺色或深色。</li>
+  <li><b>中英切換提醒</b>：開啟／關閉。</li>
+  <li><b>智慧中英切換</b>：不按 Shift、Caps Lock 也能打英文。</li>
+  <li><b>模式狀態顯示</b>：中／英模式圖示（預設開）、全／半形模式圖示（預設關）。</li>
+</ul>
+</section>
+
+<section id="files">
+<h2>詞庫檔案</h2>
+<p>詞庫資料夾可在偏好設定指定，例如 iCloud 雲碟的 <code>McBopomofo</code> 資料夾。</p>
+<ul>
+  <li><code>data.txt</code>：個人詞庫，一行一筆「詞 注音」，注音之間以 <code>-</code> 連接。</li>
+  <li><code>exclude-phrases.txt</code>：要排除的詞。</li>
+  <li><code>text-templates.txt</code>：文字範本。</li>
+  <li><code>symbol-table.txt</code>：符號表。</li>
+  <li><code>learning/</code>：選字記憶、<code>temporary/</code> 暫存詞、<code>english/</code> 打過的英文字，每台 Mac 各寫自己的檔案。</li>
+</ul>
+</section>
+
+<section id="shortcuts">
+<h2>快速鍵一覽</h2>
+<ul>
+  <li><kbd>`</kbd>：文字範本、數字快打；再按一次開啟符號表。</li>
+  <li><kbd>Tab</kbd>（英文時）：英文聯想。</li>
+  <li><kbd>=</kbd>（算式後）：自動算出答案。</li>
+  <li><kbd>Caps Lock</kbd>：切換英文小寫。</li>
+  <li><kbd>Shift</kbd> + 字母：直接打英文。</li>
+  <li><kbd>Ctrl</kbd> <kbd>⌘</kbd> <kbd>G</kbd>：輸出簡體中文。</li>
+  <li><kbd>Ctrl</kbd> <kbd>⌘</kbd> <kbd>H</kbd>：切換半形標點。</li>
+  <li><kbd>Esc</kbd>：清除組字區或關閉候選字。</li>
+</ul>
+</section>
+</main>
+</div>
+</body>
+</html>

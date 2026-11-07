@@ -97,6 +97,7 @@
 		D4E7917A2B52CDE500676A68 /* ChineseNumbers in Frameworks */ = {isa = PBXBuildFile; productRef = D4E791792B52CDE500676A68 /* ChineseNumbers */; };
 		D4EE67582B39685F00F062DE /* DictionaryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4EE67572B39685F00F062DE /* DictionaryServiceTests.swift */; };
 		D4EE675A2B39968900F062DE /* dictionary_service.json in Resources */ = {isa = PBXBuildFile; fileRef = D4EE67592B39968900F062DE /* dictionary_service.json */; };
+		A1B2C3D40000000000000005 /* UserGuide.html in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000006 /* UserGuide.html */; };
 		D4EE675B2B399D0200F062DE /* dictionary_service.json in Resources */ = {isa = PBXBuildFile; fileRef = D4EE67592B39968900F062DE /* dictionary_service.json */; };
 		D4F0BBDF279AF1AF0071253C /* ArchiveUtil.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4F0BBDE279AF1AF0071253C /* ArchiveUtil.swift */; };
 		D4F0BBE1279AF8B30071253C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4F0BBE0279AF8B30071253C /* AppDelegate.swift */; };
@@ -255,6 +256,7 @@
 		D4E791782B52CDCF00676A68 /* ChineseNumbers */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = ChineseNumbers; path = Packages/ChineseNumbers; sourceTree = "<group>"; };
 		D4EE67572B39685F00F062DE /* DictionaryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryServiceTests.swift; sourceTree = "<group>"; };
 		D4EE67592B39968900F062DE /* dictionary_service.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dictionary_service.json; sourceTree = "<group>"; };
+		A1B2C3D40000000000000006 /* UserGuide.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = UserGuide.html; sourceTree = "<group>"; };
 		D4F0BBDE279AF1AF0071253C /* ArchiveUtil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveUtil.swift; sourceTree = "<group>"; };
 		D4F0BBE0279AF8B30071253C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		D4F0BBE2279B08900071253C /* BundleTranslocate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BundleTranslocate.h; sourceTree = "<group>"; };
@@ -425,6 +427,7 @@
 				B0781B372ACA2655003D9F75 /* ServicesMenu.strings */,
 				6A187E2816004C5900466B2E /* MainMenu.xib */,
 				D4EE67592B39968900F062DE /* dictionary_service.json */,
+				A1B2C3D40000000000000006 /* UserGuide.html */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -692,6 +695,7 @@
 				6A6ED16B2797650A0012872E /* template-phrases-replacement.txt in Resources */,
 				6AFF97F2253B299E007F1C49 /* NonModalAlertWindowController.xib in Resources */,
 				D4EE675A2B39968900F062DE /* dictionary_service.json in Resources */,
+				A1B2C3D40000000000000005 /* UserGuide.html in Resources */,
 				6AE210B215FC63CC003659FE /* PlainBopomofo.tiff in Resources */,
 				6A7C450C2CC571D00076AECA /* template-data-plain-bpmf.txt in Resources */,
 				D4F0BBE7279B14C20071253C /* Credits.rtf in Resources */,

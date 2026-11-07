@@ -158,10 +158,6 @@ class McBopomofoInputMethodController: IMKInputController {
             withTitle: NSLocalizedString("Edit Symbol Table", comment: ""),
             action: #selector(openSymbolTable(_:)), keyEquivalent: "")
 
-        menu.addItem(
-            withTitle: NSLocalizedString("Reload User Phrases", comment: ""),
-            action: #selector(reloadUserPhrases(_:)), keyEquivalent: "")
-
         if !McBopomofoInputMethodController.latestUserFileIssues.isEmpty {
             // Setting menuItem.image does not work in input method menus even on macOS 26,
             // so we just use the alert emoji in the menu item title.
@@ -176,6 +172,9 @@ class McBopomofoInputMethodController: IMKInputController {
         menu.addItem(
             withTitle: NSLocalizedString("McBopomofo Preferences", comment: ""),
             action: #selector(showPreferences(_:)), keyEquivalent: "")
+        menu.addItem(
+            withTitle: NSLocalizedString("User Guide", comment: ""),
+            action: #selector(openUserGuide(_:)), keyEquivalent: "")
         menu.addItem(
             withTitle: NSLocalizedString("Check for Updates…", comment: ""),
             action: #selector(checkForUpdate(_:)), keyEquivalent: "")
@@ -377,6 +376,12 @@ class McBopomofoInputMethodController: IMKInputController {
 
     @objc func checkForUpdate(_ sender: Any?) {
         (NSApp.delegate as? AppDelegate)?.checkForUpdate(forced: true)
+    }
+
+    @objc func openUserGuide(_ sender: Any?) {
+        if let url = Bundle.main.url(forResource: "UserGuide", withExtension: "html") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     @objc func openUserPhrases(_ sender: Any?) {
