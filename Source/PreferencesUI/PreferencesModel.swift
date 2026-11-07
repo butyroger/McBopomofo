@@ -137,6 +137,32 @@ final class PreferencesViewModel: NSObject, ObservableObject {
         }
     }
 
+    var smartChineseEnglishSwitchEnabled: Bool {
+        get { Preferences.smartChineseEnglishSwitchEnabled }
+        set {
+            objectWillChange.send()
+            Preferences.smartChineseEnglishSwitchEnabled = newValue
+        }
+    }
+
+    var showChineseEnglishModeIcon: Bool {
+        get { Preferences.showChineseEnglishModeIcon }
+        set {
+            objectWillChange.send()
+            Preferences.showChineseEnglishModeIcon = newValue
+            ModeStatusBar.shared.update()
+        }
+    }
+
+    var showFullHalfWidthModeIcon: Bool {
+        get { Preferences.showFullHalfWidthModeIcon }
+        set {
+            objectWillChange.send()
+            Preferences.showFullHalfWidthModeIcon = newValue
+            ModeStatusBar.shared.update()
+        }
+    }
+
     var candidateListTextSize: CGFloat {
         get { Preferences.candidateListTextSize }
         set {

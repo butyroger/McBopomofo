@@ -248,8 +248,9 @@ class McBopomofoInputMethodController: IMKInputController {
 
         if event.type == .flagsChanged {
             if event.keyCode == UInt16(kVK_CapsLock) {
-                ChineseEnglishSwitchReminder.notify(
-                    isEnglish: event.modifierFlags.contains(.capsLock))
+                let capsLockOn = event.modifierFlags.contains(.capsLock)
+                ChineseEnglishSwitchReminder.notify(isEnglish: capsLockOn)
+                ModeStatusBar.shared.setCapsLockOn(capsLockOn)
             }
 
             if Preferences.switchInputSourceUponCommandKeyPressEnabled,
@@ -346,6 +347,7 @@ class McBopomofoInputMethodController: IMKInputController {
 
     @objc func toggleHalfWidthPunctuation(_ sender: Any?) {
         let enabled = Preferences.toggleHalfWidthPunctuationEnabled()
+        ModeStatusBar.shared.update()
         NotifierController.notify(
             message: enabled
                 ? NSLocalizedString("Half-Width Punctuation On", comment: "")

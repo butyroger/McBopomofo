@@ -511,6 +511,23 @@ private struct BasicPreferencesView: View {
                 .fixedSize()
             }
 
+            PreferenceRow(localized("Smart Chinese/English Switch:")) {
+                Toggle(
+                    localized("Type English without Shift or Caps Lock"),
+                    isOn: $preferences.smartChineseEnglishSwitchEnabled)
+            }
+
+            PreferenceRow(localized("Mode Icons:")) {
+                HStack {
+                    Toggle(
+                        localized("Chinese/English"),
+                        isOn: $preferences.showChineseEnglishModeIcon)
+                    Toggle(
+                        localized("Full/Half-Width"),
+                        isOn: $preferences.showFullHalfWidthModeIcon)
+                }
+            }
+
             PreferenceRow(localized("Shift + Letter Keys:")) {
                 Picker("", selection: $preferences.letterBehavior) {
                     Text(localized("Input uppercase letters directly")).tag(0)

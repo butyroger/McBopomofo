@@ -37,6 +37,13 @@ namespace McBopomofo {
 static constexpr std::string_view kMacroPrefix = "MACRO@";
 static constexpr double kMacroScore = -8.0;
 
+// The grid also asks for readings joined by "-", such as
+// "_literal_a-_literal_b", which are not a literal key.
+static bool isLiteralKey(const std::string& key) {
+  std::string text = key.substr(sizeof(McBopomofoLM::kLiteralKeyPrefix) - 1);
+  return !text.empty() && (text == "-" || text.find('-') == std::string::npos);
+}
+
 void McBopomofoLM::loadLanguageModel(const char* languageModelDataPath) {
   if (languageModelDataPath) {
     languageModel_.close();
@@ -140,6 +147,14 @@ McBopomofoLM::getUnigrams(const std::string& key) {
     std::vector<Formosa::Gramambular2::LanguageModel::Unigram> spaceUnigrams;
     spaceUnigrams.emplace_back(" ", 0);
     return spaceUnigrams;
+  }
+
+  if (key.rfind(kLiteralKeyPrefix, 0) == 0) {
+    std::vector<Formosa::Gramambular2::LanguageModel::Unigram> results;
+    if (isLiteralKey(key)) {
+      results.emplace_back(key.substr(sizeof(kLiteralKeyPrefix) - 1), 0);
+    }
+    return results;
   }
 
   if (key.rfind(kSymbolsKeyPrefix, 0) == 0) {
@@ -331,6 +346,10 @@ size_t McBopomofoLM::getSymbolInitialIndex(const std::string& key) {
 bool McBopomofoLM::hasUnigrams(const std::string& key) {
   if (key == " ") {
     return true;
+  }
+
+  if (key.rfind(kLiteralKeyPrefix, 0) == 0) {
+    return isLiteralKey(key);
   }
 
   if (key.rfind(kSymbolsKeyPrefix, 0) == 0) {

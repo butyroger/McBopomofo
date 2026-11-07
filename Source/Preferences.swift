@@ -37,6 +37,9 @@ private let kMoveCursorAfterSelectingCandidateKey = "MoveCursorAfterSelectingCan
 private let kUseHorizontalCandidateListPreferenceKey = "UseHorizontalCandidateList"
 private let kCandidatePanelThemeKey = "CandidatePanelTheme"
 private let kChineseEnglishSwitchReminderEnabledKey = "ChineseEnglishSwitchReminderEnabled"
+private let kSmartChineseEnglishSwitchEnabledKey = "SmartChineseEnglishSwitchEnabled"
+private let kShowChineseEnglishModeIconKey = "ShowChineseEnglishModeIcon"
+private let kShowFullHalfWidthModeIconKey = "ShowFullHalfWidthModeIcon"
 private let kChooseCandidateUsingSpaceKey = "ChooseCandidateUsingSpaceKey"
 private let kChineseConversionEnabledKey = "ChineseConversionEnabled"
 private let kHalfWidthPunctuationEnabledKey = "HalfWidthPunctuationEnable"
@@ -230,6 +233,9 @@ class Preferences: NSObject {
             kUseHorizontalCandidateListPreferenceKey,
             kCandidatePanelThemeKey,
             kChineseEnglishSwitchReminderEnabledKey,
+            kSmartChineseEnglishSwitchEnabledKey,
+            kShowChineseEnglishModeIconKey,
+            kShowFullHalfWidthModeIconKey,
             kChooseCandidateUsingSpaceKey,
             kChineseConversionEnabledKey,
             kHalfWidthPunctuationEnabledKey,
@@ -324,6 +330,20 @@ class Preferences: NSObject {
     /// the state by itself.
     @UserDefault(key: kChineseEnglishSwitchReminderEnabledKey, defaultValue: true)
     @objc static var chineseEnglishSwitchReminderEnabled: Bool
+
+    /// Types English without Shift or Caps Lock: keys that do not make a
+    /// Bopomofo syllable are put into the composing buffer as English, until
+    /// a space, a symbol or Backspace.
+    @UserDefault(key: kSmartChineseEnglishSwitchEnabledKey, defaultValue: true)
+    @objc static var smartChineseEnglishSwitchEnabled: Bool
+
+    /// Shows "中" or "英" in the menu bar.
+    @UserDefault(key: kShowChineseEnglishModeIconKey, defaultValue: true)
+    @objc static var showChineseEnglishModeIcon: Bool
+
+    /// Shows "全" or "半" (full-width or half-width punctuation) in the menu bar.
+    @UserDefault(key: kShowFullHalfWidthModeIconKey, defaultValue: true)
+    @objc static var showFullHalfWidthModeIcon: Bool
 
     @UserDefault(key: kChooseCandidateUsingSpaceKey, defaultValue: true)
     @objc static var chooseCandidateUsingSpace: Bool
@@ -670,6 +690,12 @@ extension Preferences {
         )
         lines.append(
             "  - Chinese/English Switch Reminder: \(Preferences.chineseEnglishSwitchReminderEnabled ? "Enabled" : "Disabled")"
+        )
+        lines.append(
+            "  - Smart Chinese/English Switch: \(Preferences.smartChineseEnglishSwitchEnabled ? "Enabled" : "Disabled")"
+        )
+        lines.append(
+            "  - Mode Icons: Chinese/English \(Preferences.showChineseEnglishModeIcon ? "Shown" : "Hidden"), Full/Half-width \(Preferences.showFullHalfWidthModeIcon ? "Shown" : "Hidden")"
         )
         lines.append(
             "  - Chinese Conversion: \(Preferences.chineseConversionEnabled ? "Enabled" : "Disabled")"

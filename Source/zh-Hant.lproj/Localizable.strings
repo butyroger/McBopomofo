@@ -275,3 +275,8 @@
 "On" = "開啟";
 "Chinese Mode" = "中文";
 "English Mode" = "ABC";
+"Smart Chinese/English Switch:" = "智慧中英切換：";
+"Type English without Shift or Caps Lock" = "不按 Shift、Caps Lock 也能打英文（空白、符號或倒退鍵回到中文）";
+"Mode Icons:" = "模式狀態顯示：";
+"Chinese/English" = "中／英模式圖示";
+"Full/Half-Width" = "全／半形模式圖示";

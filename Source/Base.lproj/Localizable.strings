@@ -275,3 +275,8 @@
 "On" = "On";
 "Chinese Mode" = "中文";
 "English Mode" = "ABC";
+"Smart Chinese/English Switch:" = "Smart Chinese/English Switch:";
+"Type English without Shift or Caps Lock" = "Type English without Shift or Caps Lock (space, a symbol or Backspace goes back to Chinese)";
+"Mode Icons:" = "Mode Icons:";
+"Chinese/English" = "Chinese/English";
+"Full/Half-Width" = "Full/Half-Width";

@@ -503,6 +503,7 @@ class ChineseEnglishSwitchReminder: NSObject {
 
     func start() {
         isMcBopomofoSelected = Self.isMcBopomofo(Self.currentInputSourceID())
+        ModeStatusBar.shared.setMcBopomofoSelected(isMcBopomofoSelected)
         // The input method is never the active app, so the notification has
         // to be delivered immediately, or it waits until the app is active.
         DistributedNotificationCenter.default().addObserver(
@@ -518,6 +519,7 @@ class ChineseEnglishSwitchReminder: NSObject {
                 return
             }
             self.isMcBopomofoSelected = selected
+            ModeStatusBar.shared.setMcBopomofoSelected(selected)
             // With Caps Lock on, McBopomofo types English letters.
             Self.notify(isEnglish: !selected || NSEvent.modifierFlags.contains(.capsLock))
         }
@@ -536,5 +538,67 @@ class ChineseEnglishSwitchReminder: NSObject {
             return false
         }
         return sourceID.hasPrefix(bundleID)
+    }
+}
+
+/// Shows the mode of McBopomofo in the menu bar while it is the selected
+/// input source: "中" or "英", and "全" or "半" for the punctuation width.
+@objc class ModeStatusBar: NSObject {
+    @objc static let shared = ModeStatusBar()
+
+    private var isMcBopomofoSelected = false
+    private var isCapsLockOn = false
+    private var isSmartEnglishMode = false
+
+    // Created in this order, so that "全/半" is on the left of "中/英".
+    private lazy var languageItem = makeItem(action: nil)
+    private lazy var widthItem = makeItem(action: #selector(toggleHalfWidthPunctuation(_:)))
+
+    func setMcBopomofoSelected(_ selected: Bool) {
+        isMcBopomofoSelected = selected
+        // Caps Lock may have been toggled while another input source is used.
+        isCapsLockOn = NSEvent.modifierFlags.contains(.capsLock)
+        update()
+    }
+
+    func setCapsLockOn(_ on: Bool) {
+        isCapsLockOn = on
+        update()
+    }
+
+    @objc func setSmartEnglishMode(_ englishMode: Bool) {
+        isSmartEnglishMode = englishMode
+        update()
+    }
+
+    @objc func update() {
+        let showLanguage = isMcBopomofoSelected && Preferences.showChineseEnglishModeIcon
+        let showWidth = isMcBopomofoSelected && Preferences.showFullHalfWidthModeIcon
+        // Do not create the items until they are to be shown.
+        if !showLanguage && !showWidth && !itemsCreated {
+            return
+        }
+        languageItem.isVisible = showLanguage
+        languageItem.button?.title = isCapsLockOn || isSmartEnglishMode ? "英" : "中"
+        widthItem.isVisible = showWidth
+        widthItem.button?.title = Preferences.halfWidthPunctuationEnabled ? "半" : "全"
+    }
+
+    private var itemsCreated = false
+
+    private func makeItem(action: Selector?) -> NSStatusItem {
+        itemsCreated = true
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        item.button?.font = NSFont.menuBarFont(ofSize: 0)
+        if let action {
+            item.button?.target = self
+            item.button?.action = action
+        }
+        return item
+    }
+
+    @objc private func toggleHalfWidthPunctuation(_ sender: Any?) {
+        _ = Preferences.toggleHalfWidthPunctuationEnabled()
+        update()
     }
 }

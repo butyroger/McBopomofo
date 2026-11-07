@@ -99,6 +99,10 @@ class McBopomofoLM : public Formosa::Gramambular2::LanguageModel {
   // all symbols ("_punctuation_list"), so that the user can pick any symbol
   // from a punctuation that has been typed.
   static constexpr char kSymbolsKeyPrefix[] = "_symbols_";
+
+  // A reading with this prefix stands for the text after the prefix as is,
+  // such as an English letter typed in the middle of Chinese.
+  static constexpr char kLiteralKeyPrefix[] = "_literal_";
   static constexpr char kPunctuationListKey[] = "_punctuation_list";
 
   struct SymbolCategory {

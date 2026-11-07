@@ -68,6 +68,15 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
     // The punctuation reading replaced by the symbol table, to be restored
     // when the user cancels.
     std::string _readingBeforeSymbolTable;
+
+    // The keys typed for the Bopomofo reading being composed, so that they
+    // can be turned into English as typed.
+    std::string _rawKeysOfReading;
+
+    // Smart Chinese/English switching: English letters typed are put into
+    // the composing buffer as is, until a space, a symbol or Backspace.
+    BOOL _smartEnglishMode;
+    BOOL _smartEnglishDigitsOnly;
 }
 
 @synthesize delegate = _delegate;
@@ -501,8 +510,76 @@ static const size_t kLearnPhraseThreshold = 2;
     // Cursor is already at accumulatedCursor, so no more work here.
 }
 
+- (BOOL)_isSmartSwitchingAvailableForInput:(KeyHandlerInput *)input
+{
+    return Preferences.smartChineseEnglishSwitchEnabled && _inputMode == InputModeBopomofo
+        && Preferences.keyboardLayout != KeyboardLayoutHanyuPinyin
+        && !input.isControlHold && !input.isCommandHold && !input.isOptionHold && !input.isNumericPad;
+}
+
+- (void)_setSmartEnglishMode:(BOOL)englishMode
+{
+    if (_smartEnglishMode == englishMode) {
+        return;
+    }
+    _smartEnglishMode = englishMode;
+    [ModeStatusBar.shared setSmartEnglishMode:englishMode];
+}
+
+- (int)_componentCount:(const Formosa::Mandarin::BopomofoSyllable &)syllable
+{
+    return (syllable.hasConsonant() ? 1 : 0) + (syllable.hasMiddleVowel() ? 1 : 0) + (syllable.hasVowel() ? 1 : 0);
+}
+
+/// The keys typed for the current reading. If they are out of sync with the
+/// reading, such as after Backspace, gives the keys that make the reading.
+- (std::string)_rawKeysOfCurrentReading
+{
+    if (_bpmfReadingBuffer->isEmpty()) {
+        return "";
+    }
+    Formosa::Mandarin::BopomofoReadingBuffer tmpBuffer(_bpmfReadingBuffer->keyboardLayout());
+    for (char k : _rawKeysOfReading) {
+        tmpBuffer.combineKey(k);
+    }
+    if (tmpBuffer.composedString() == _bpmfReadingBuffer->composedString()) {
+        return _rawKeysOfReading;
+    }
+    return _bpmfReadingBuffer->keyboardLayout()->keySequenceFromSyllable(_bpmfReadingBuffer->syllable());
+}
+
+/// Puts the text into the composing buffer as is, one reading for each
+/// character.
+- (void)_insertLiteralText:(NSString *)text
+{
+    __block BOOL inserted = NO;
+    [text enumerateSubstringsInRange:NSMakeRange(0, text.length) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
+        std::string reading = std::string(McBopomofo::McBopomofoLM::kLiteralKeyPrefix) + substring.UTF8String;
+        inserted = self->_grid->insertReading(reading) || inserted;
+    }];
+    if (inserted) {
+        [self _walk];
+    }
+}
+
+/// Turns the unfinished reading into English and starts the English mode
+/// with the text.
+- (void)_switchToSmartEnglishWithText:(const std::string &)text
+{
+    _bpmfReadingBuffer->clear();
+    _rawKeysOfReading.clear();
+    BOOL digitsOnly = YES;
+    for (char c : text) {
+        digitsOnly = digitsOnly && isdigit(c);
+    }
+    [self _insertLiteralText:[NSString stringWithUTF8String:text.c_str()]];
+    [self _setSmartEnglishMode:YES];
+    _smartEnglishDigitsOnly = digitsOnly;
+}
+
 - (void)clear
 {
+    [self _setSmartEnglishMode:NO];
     _readingBeforeSymbolTable.clear();
     _bpmfReadingBuffer->clear();
     _grid->clear();
@@ -682,12 +759,78 @@ static const size_t kLearnPhraseThreshold = 2;
     BOOL keyConsumedByReading = NO;
     BOOL skipBpmfHandling = input.isReservedKey || input.isControlHold;
 
+    // MARK: Smart Chinese/English Switching
+    BOOL smartSwitching = [self _isSmartSwitchingAvailableForInput:input];
+    if (smartSwitching && _smartEnglishMode) {
+        if (charCode == 32) {
+            // A space after digits only leaves the English mode, so that a
+            // number can be followed by Chinese, like "2026年".
+            if (!_smartEnglishDigitsOnly) {
+                [self _insertLiteralText:@" "];
+            }
+            [self _setSmartEnglishMode:NO];
+            stateCallback([self buildInputtingState]);
+            return YES;
+        }
+        if (charCode < 0x80 && isprint(charCode)) {
+            [self _insertLiteralText:input.inputText];
+            if (isalnum(charCode)) {
+                _smartEnglishDigitsOnly = _smartEnglishDigitsOnly && isdigit(charCode);
+            } else {
+                [self _setSmartEnglishMode:NO];
+            }
+            stateCallback([self buildInputtingState]);
+            return YES;
+        }
+        // Backspace, Enter, Esc and so on are handled as usual.
+        [self _setSmartEnglishMode:NO];
+    } else if (smartSwitching) {
+        // An uppercase letter starts English, like "ChatGPT".
+        BOOL isUppercaseLetter = charCode >= 'A' && charCode <= 'Z';
+        if (isUppercaseLetter && !Preferences.switchInputSourceUponShiftLetterKeyComboEnabled && Preferences.letterBehavior == 0) {
+            [self _switchToSmartEnglishWithText:[self _rawKeysOfCurrentReading] + std::string(1, (char)charCode)];
+            stateCallback([self buildInputtingState]);
+            return YES;
+        }
+
+        if (!_bpmfReadingBuffer->isEmpty() && charCode < 0x80 && isprint(charCode) && charCode != 32) {
+            if (!skipBpmfHandling && _bpmfReadingBuffer->isValidKey((char)charCode)) {
+                // A key that replaces a part of the reading, like the second
+                // "p" in "app" (ㄇㄣ, then ㄣ again), does not make Chinese.
+                Formosa::Mandarin::BopomofoReadingBuffer tmpBuffer(*_bpmfReadingBuffer);
+                tmpBuffer.combineKey((char)charCode);
+                if (!tmpBuffer.hasToneMarker() && [self _componentCount:tmpBuffer.syllable()] <= [self _componentCount:_bpmfReadingBuffer->syllable()]) {
+                    [self _switchToSmartEnglishWithText:[self _rawKeysOfCurrentReading] + std::string(1, (char)charCode)];
+                    stateCallback([self buildInputtingState]);
+                    return YES;
+                }
+            } else if (!isUppercaseLetter) {
+                // A digit or a symbol right after an unfinished reading, like
+                // "ok?", makes the keys English, and the symbol is kept as is.
+                std::string keys = [self _rawKeysOfCurrentReading];
+                _bpmfReadingBuffer->clear();
+                [self _insertLiteralText:[NSString stringWithUTF8String:keys.c_str()]];
+                if (isalnum(charCode)) {
+                    [self _switchToSmartEnglishWithText:std::string(1, (char)charCode)];
+                } else {
+                    [self _insertLiteralText:input.inputText];
+                }
+                stateCallback([self buildInputtingState]);
+                return YES;
+            }
+        }
+    }
+
     // MARK: Handle BPMF Keys
 
     // see if it's valid BPMF reading
     bool isValidKey = _bpmfReadingBuffer->isValidKey((char)charCode);
     if (!skipBpmfHandling && isValidKey) {
+        if (_bpmfReadingBuffer->isEmpty()) {
+            _rawKeysOfReading.clear();
+        }
         _bpmfReadingBuffer->combineKey((char)charCode);
+        _rawKeysOfReading += (char)charCode;
         keyConsumedByReading = YES;
 
         // if we have a tone marker, we have to insert the reading to the
@@ -738,6 +881,24 @@ static const size_t kLearnPhraseThreshold = 2;
 
         // see if we have a unigram for this
         if (!_languageModel->hasUnigrams(reading)) {
+            if (smartSwitching) {
+                // Not a Chinese syllable, like "you" (ㄗㄧㄟ) and a space.
+                std::string keys = [self _rawKeysOfCurrentReading];
+                _bpmfReadingBuffer->clear();
+                if (charCode == 32 || charCode == 13) {
+                    [self _insertLiteralText:[NSString stringWithUTF8String:keys.c_str()]];
+                    if (charCode == 32) {
+                        [self _insertLiteralText:@" "];
+                        stateCallback([self buildInputtingState]);
+                        return YES;
+                    }
+                    return [self _handleEnterWithState:[self buildInputtingState] stateCallback:stateCallback errorCallback:errorCallback];
+                }
+                // The tone key is a letter or a digit typed in English.
+                [self _switchToSmartEnglishWithText:keys];
+                stateCallback([self buildInputtingState]);
+                return YES;
+            }
             errorCallback();
 
             if (Preferences.keepReadingUponCompositionError) {
