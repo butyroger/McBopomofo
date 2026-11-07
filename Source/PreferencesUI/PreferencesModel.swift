@@ -129,6 +129,14 @@ final class PreferencesViewModel: NSObject, ObservableObject {
         }
     }
 
+    var chineseEnglishSwitchReminderEnabled: Bool {
+        get { Preferences.chineseEnglishSwitchReminderEnabled }
+        set {
+            objectWillChange.send()
+            Preferences.chineseEnglishSwitchReminderEnabled = newValue
+        }
+    }
+
     var candidateListTextSize: CGFloat {
         get { Preferences.candidateListTextSize }
         set {

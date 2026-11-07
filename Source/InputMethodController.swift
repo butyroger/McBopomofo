@@ -247,6 +247,11 @@ class McBopomofoInputMethodController: IMKInputController {
         }
 
         if event.type == .flagsChanged {
+            if event.keyCode == UInt16(kVK_CapsLock) {
+                ChineseEnglishSwitchReminder.notify(
+                    isEnglish: event.modifierFlags.contains(.capsLock))
+            }
+
             if Preferences.switchInputSourceUponCommandKeyPressEnabled,
                (event.keyCode == UInt16(kVK_Command) || event.keyCode == UInt16(kVK_RightCommand)),
                event.modifierFlags.contains(.command) {

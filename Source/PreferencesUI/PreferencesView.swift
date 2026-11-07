@@ -500,6 +500,17 @@ private struct BasicPreferencesView: View {
             Divider()
                 .padding(.vertical, 5)
 
+            PreferenceRow(localized("Chinese/English Switch Reminder:")) {
+                Picker("", selection: $preferences.chineseEnglishSwitchReminderEnabled) {
+                    Text(localized("On")).tag(true)
+                    Text(localized("Off")).tag(false)
+                }
+                .labelsHidden()
+                .pickerStyle(RadioGroupPickerStyle())
+                .horizontalRadioGroupLayout()
+                .fixedSize()
+            }
+
             PreferenceRow(localized("Shift + Letter Keys:")) {
                 Picker("", selection: $preferences.letterBehavior) {
                     Text(localized("Input uppercase letters directly")).tag(0)

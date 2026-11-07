@@ -36,6 +36,7 @@ private let kSelectPhraseAfterCursorAsCandidateKey = "SelectPhraseAfterCursorAsC
 private let kMoveCursorAfterSelectingCandidateKey = "MoveCursorAfterSelectingCandidate"
 private let kUseHorizontalCandidateListPreferenceKey = "UseHorizontalCandidateList"
 private let kCandidatePanelThemeKey = "CandidatePanelTheme"
+private let kChineseEnglishSwitchReminderEnabledKey = "ChineseEnglishSwitchReminderEnabled"
 private let kChooseCandidateUsingSpaceKey = "ChooseCandidateUsingSpaceKey"
 private let kChineseConversionEnabledKey = "ChineseConversionEnabled"
 private let kHalfWidthPunctuationEnabledKey = "HalfWidthPunctuationEnable"
@@ -228,6 +229,7 @@ class Preferences: NSObject {
             kSelectPhraseAfterCursorAsCandidateKey,
             kUseHorizontalCandidateListPreferenceKey,
             kCandidatePanelThemeKey,
+            kChineseEnglishSwitchReminderEnabledKey,
             kChooseCandidateUsingSpaceKey,
             kChineseConversionEnabledKey,
             kHalfWidthPunctuationEnabledKey,
@@ -316,6 +318,12 @@ class Preferences: NSObject {
     /// light, and 2 is dark.
     @UserDefault(key: kCandidatePanelThemeKey, defaultValue: 0)
     @objc static var candidatePanelTheme: Int
+
+    /// Shows "ABC" or "中文" at the top-right corner of the screen when the
+    /// user switches between Chinese and English, since macOS does not show
+    /// the state by itself.
+    @UserDefault(key: kChineseEnglishSwitchReminderEnabledKey, defaultValue: true)
+    @objc static var chineseEnglishSwitchReminderEnabled: Bool
 
     @UserDefault(key: kChooseCandidateUsingSpaceKey, defaultValue: true)
     @objc static var chooseCandidateUsingSpace: Bool
@@ -659,6 +667,9 @@ extension Preferences {
         )
         lines.append(
             "  - Candidate Panel Theme: \(["System", "Light", "Dark"][min(max(Preferences.candidatePanelTheme, 0), 2)])"
+        )
+        lines.append(
+            "  - Chinese/English Switch Reminder: \(Preferences.chineseEnglishSwitchReminderEnabled ? "Enabled" : "Disabled")"
         )
         lines.append(
             "  - Chinese Conversion: \(Preferences.chineseConversionEnabled ? "Enabled" : "Disabled")"

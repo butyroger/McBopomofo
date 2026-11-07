@@ -21,9 +21,11 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+import Carbon
 import Cocoa
 import FSEventStreamHelper
 import InputMethodKit
+import NotifierUI
 
 private let kCheckUpdateAutomatically = "CheckUpdateAutomatically"
 private let kNextUpdateCheckDateKey = "NextUpdateCheckDate"
@@ -210,6 +212,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NonModalAlertWindowControlle
         NSApp.servicesProvider = serviceProvider
 
         enableBopomofoFontAnnotationSupportMenuItemIfRelevantFontsInstalled()
+
+        ChineseEnglishSwitchReminder.shared.start()
 
         checkForUpdate()
     }
@@ -476,5 +480,61 @@ extension AppDelegate {
         if hasSupportingFont {
             Preferences.showBopomofoFontAnnotationSupportItemInInputMenu = true
         }
+    }
+}
+
+/// Shows "ABC" or "中文" at the top-right corner of the screen when the user
+/// switches between Chinese and English: Caps Lock in McBopomofo, or switching
+/// between McBopomofo and another input source.
+class ChineseEnglishSwitchReminder: NSObject {
+    static let shared = ChineseEnglishSwitchReminder()
+
+    private var isMcBopomofoSelected = false
+
+    static func notify(isEnglish: Bool) {
+        guard Preferences.chineseEnglishSwitchReminderEnabled else {
+            return
+        }
+        NotifierController.notify(
+            message: isEnglish
+                ? NSLocalizedString("English Mode", comment: "")
+                : NSLocalizedString("Chinese Mode", comment: ""))
+    }
+
+    func start() {
+        isMcBopomofoSelected = Self.isMcBopomofo(Self.currentInputSourceID())
+        // The input method is never the active app, so the notification has
+        // to be delivered immediately, or it waits until the app is active.
+        DistributedNotificationCenter.default().addObserver(
+            self, selector: #selector(selectedInputSourceDidChange(_:)),
+            name: NSNotification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String),
+            object: nil, suspensionBehavior: .deliverImmediately)
+    }
+
+    @objc private func selectedInputSourceDidChange(_ notification: Notification) {
+        DispatchQueue.main.async {
+            let selected = Self.isMcBopomofo(Self.currentInputSourceID())
+            if selected == self.isMcBopomofoSelected {
+                return
+            }
+            self.isMcBopomofoSelected = selected
+            // With Caps Lock on, McBopomofo types English letters.
+            Self.notify(isEnglish: !selected || NSEvent.modifierFlags.contains(.capsLock))
+        }
+    }
+
+    private static func currentInputSourceID() -> String? {
+        let source = TISCopyCurrentKeyboardInputSource().takeRetainedValue()
+        guard let pointer = TISGetInputSourceProperty(source, kTISPropertyInputSourceID) else {
+            return nil
+        }
+        return Unmanaged<CFString>.fromOpaque(pointer).takeUnretainedValue() as String
+    }
+
+    private static func isMcBopomofo(_ sourceID: String?) -> Bool {
+        guard let sourceID, let bundleID = Bundle.main.bundleIdentifier else {
+            return false
+        }
+        return sourceID.hasPrefix(bundleID)
     }
 }
