@@ -152,6 +152,9 @@ class McBopomofoInputMethodController: IMKInputController {
             }
         }
         menu.addItem(
+            withTitle: NSLocalizedString("Manage Vocabulary…", comment: ""),
+            action: #selector(showVocabularyManager(_:)), keyEquivalent: "")
+        menu.addItem(
             withTitle: NSLocalizedString("Edit Text Templates", comment: ""),
             action: #selector(openTextTemplates(_:)), keyEquivalent: "")
         menu.addItem(
@@ -168,6 +171,14 @@ class McBopomofoInputMethodController: IMKInputController {
         }
 
         menu.addItem(NSMenuItem.separator())
+
+        if let bundleID = (currentClient as? IMKTextInput)?.bundleIdentifier(), !bundleID.isEmpty {
+            let floatingItem = menu.addItem(
+                withTitle: NSLocalizedString("Floating Composition Window for This App", comment: ""),
+                action: #selector(toggleFloatingComposition(_:)), keyEquivalent: "")
+            floatingItem.state =
+                Preferences.floatingCompositionBundleIDs.contains(bundleID) ? .on : .off
+        }
 
         menu.addItem(
             withTitle: NSLocalizedString("McBopomofo Preferences", comment: ""),
@@ -322,6 +333,40 @@ class McBopomofoInputMethodController: IMKInputController {
             message: enabled
                 ? NSLocalizedString("Chinese Conversion On", comment: "")
                 : NSLocalizedString("Chinese Conversion Off", comment: ""))
+        if let currentClient = currentClient {
+            keyHandler.clear()
+            self.handle(state: InputState.Empty(), client: currentClient)
+        }
+    }
+
+    @objc func showVocabularyManager(_ sender: Any?) {
+        (NSApp.delegate as? AppDelegate)?.showVocabularyManager()
+    }
+
+    @objc func toggleFloatingComposition(_ sender: Any?) {
+        guard let bundleID = (currentClient as? IMKTextInput)?.bundleIdentifier(), !bundleID.isEmpty
+        else {
+            return
+        }
+        var bundleIDs = Preferences.floatingCompositionBundleIDs
+        let enabled: Bool
+        if let index = bundleIDs.firstIndex(of: bundleID) {
+            bundleIDs.remove(at: index)
+            enabled = false
+        } else {
+            bundleIDs.append(bundleID)
+            enabled = true
+        }
+        Preferences.floatingCompositionBundleIDs = bundleIDs
+        let name =
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
+            .flatMap { Bundle(url: $0)?.object(forInfoDictionaryKey: "CFBundleName") as? String }
+            ?? bundleID
+        NotifierController.notify(
+            message: String(
+                format: NSLocalizedString(
+                    enabled ? "Floating composition window on for %@" : "Floating composition window off for %@",
+                    comment: ""), name))
         if let currentClient = currentClient {
             keyHandler.clear()
             self.handle(state: InputState.Empty(), client: currentClient)
@@ -532,8 +577,28 @@ extension McBopomofoInputMethodController {
             buffer, replacementRange: NSRange(location: NSNotFound, length: NSNotFound))
     }
 
+    /// Sets the text being composed in the client, or shows it in the
+    /// floating composition window for an app that uses it.
+    private func setMarkedText(
+        client: IMKTextInput, _ string: Any, selectionRange: NSRange, replacementRange: NSRange
+    ) {
+        guard FloatingCompositionPanel.isEnabled(for: client) else {
+            FloatingCompositionPanel.shared.hide()
+            client.setMarkedText(
+                string, selectionRange: selectionRange, replacementRange: replacementRange)
+            return
+        }
+        client.setMarkedText(
+            "", selectionRange: NSMakeRange(0, 0),
+            replacementRange: NSMakeRange(NSNotFound, NSNotFound))
+        let text = (string as? NSAttributedString)?.string ?? (string as? String) ?? ""
+        FloatingCompositionPanel.shared.show(
+            text: text, cursor: selectionRange.location, client: client)
+    }
+
     private func handle(state: InputState.Deactivated, previous: InputState, client: Any?) {
         currentClient = nil
+        FloatingCompositionPanel.shared.hide()
 
         gCurrentCandidateController?.delegate = nil
         gCurrentCandidateController?.visible = false
@@ -550,7 +615,8 @@ extension McBopomofoInputMethodController {
             is InputState.Number,
             is InputState.IcuTransform,
             is InputState.TextTemplate:
-            client.setMarkedText(
+            setMarkedText(
+                client: client,
                 "", selectionRange: NSMakeRange(0, 0), replacementRange: NSMakeRange(0, 0))
         default:
             break
@@ -573,7 +639,8 @@ extension McBopomofoInputMethodController {
         if let previous = previous as? InputState.NotEmpty {
             commit(text: previous.composingBuffer, client: client)
         }
-        client.setMarkedText(
+        setMarkedText(
+                client: client,
             "", selectionRange: NSMakeRange(0, 0),
             replacementRange: NSMakeRange(NSNotFound, NSNotFound))
     }
@@ -588,7 +655,8 @@ extension McBopomofoInputMethodController {
             return
         }
 
-        client.setMarkedText(
+        setMarkedText(
+                client: client,
             "", selectionRange: NSMakeRange(0, 0),
             replacementRange: NSMakeRange(NSNotFound, NSNotFound))
     }
@@ -605,7 +673,8 @@ extension McBopomofoInputMethodController {
         if !poppedText.isEmpty {
             commit(text: poppedText, client: client)
         }
-        client.setMarkedText(
+        setMarkedText(
+                client: client,
             "", selectionRange: NSMakeRange(0, 0),
             replacementRange: NSMakeRange(NSNotFound, NSNotFound))
     }
@@ -620,7 +689,8 @@ extension McBopomofoInputMethodController {
 
         // the selection range is where the cursor is, with the length being 0 and replacement range NSNotFound,
         // i.e. the client app needs to take care of where to put this composing buffer
-        client.setMarkedText(
+        setMarkedText(
+                client: client,
             state.attributedString, selectionRange: NSMakeRange(Int(state.cursorIndex), 0),
             replacementRange: NSMakeRange(NSNotFound, NSNotFound))
         if !state.tooltip.isEmpty {
@@ -639,7 +709,8 @@ extension McBopomofoInputMethodController {
 
         // the selection range is where the cursor is, with the length being 0 and replacement range NSNotFound,
         // i.e. the client app needs to take care of where to put this composing buffer
-        client.setMarkedText(
+        setMarkedText(
+                client: client,
             state.attributedString, selectionRange: NSMakeRange(Int(state.cursorIndex), 0),
             replacementRange: NSMakeRange(NSNotFound, NSNotFound))
 
@@ -661,7 +732,8 @@ extension McBopomofoInputMethodController {
 
         // the selection range is where the cursor is, with the length being 0 and replacement range NSNotFound,
         // i.e. the client app needs to take care of where to put this composing buffer
-        client.setMarkedText(
+        setMarkedText(
+                client: client,
             state.attributedString, selectionRange: NSMakeRange(Int(state.cursorIndex), 0),
             replacementRange: NSMakeRange(NSNotFound, NSNotFound))
         show(candidateWindowWith: state, client: client)
@@ -679,12 +751,14 @@ extension McBopomofoInputMethodController {
         // i.e. the client app needs to take care of where to put this composing buffer
         switch previousState {
         case let previousState as InputState.ChoosingCandidate:
-            client.setMarkedText(
+            setMarkedText(
+                client: client,
                 previousState.attributedString,
                 selectionRange: NSMakeRange(Int(previousState.cursorIndex), 0),
                 replacementRange: NSMakeRange(NSNotFound, NSNotFound))
         case let previousState as InputState.Inputting:
-            client.setMarkedText(
+            setMarkedText(
+                client: client,
                 previousState.attributedString,
                 selectionRange: NSMakeRange(Int(previousState.cursorIndex), 0),
                 replacementRange: NSMakeRange(NSNotFound, NSNotFound))
@@ -702,7 +776,8 @@ extension McBopomofoInputMethodController {
             gCurrentCandidateController?.visible = false
             return
         }
-        client.setMarkedText(
+        setMarkedText(
+                client: client,
             "", selectionRange: NSMakeRange(0, 0),
             replacementRange: NSMakeRange(NSNotFound, NSNotFound))
         show(candidateWindowWith: state, client: client)
@@ -724,7 +799,8 @@ extension McBopomofoInputMethodController {
             return
         }
 
-        client.setMarkedText(
+        setMarkedText(
+                client: client,
             composingBuffer,
             selectionRange: NSMakeRange(
                 (composingBuffer as NSString).length,
@@ -763,12 +839,14 @@ extension McBopomofoInputMethodController {
 
         switch previousState {
         case let previousState as InputState.ChoosingCandidate:
-            client.setMarkedText(
+            setMarkedText(
+                client: client,
                 previousState.attributedString,
                 selectionRange: NSMakeRange(Int(previousState.cursorIndex), 0),
                 replacementRange: NSMakeRange(NSNotFound, NSNotFound))
         case let previousState as InputState.Marking:
-            client.setMarkedText(
+            setMarkedText(
+                client: client,
                 previousState.attributedString,
                 selectionRange: NSMakeRange(Int(previousState.cursorIndex), 0),
                 replacementRange: NSMakeRange(NSNotFound, NSNotFound))
@@ -790,12 +868,14 @@ extension McBopomofoInputMethodController {
         // i.e. the client app needs to take care of where to put this composing buffer
         switch previousState {
         case let previousState as InputState.ChoosingCandidate:
-            client.setMarkedText(
+            setMarkedText(
+                client: client,
                 previousState.attributedString,
                 selectionRange: NSMakeRange(Int(previousState.cursorIndex), 0),
                 replacementRange: NSMakeRange(NSNotFound, NSNotFound))
         case let previousState as InputState.Marking:
-            client.setMarkedText(
+            setMarkedText(
+                client: client,
                 previousState.attributedString,
                 selectionRange: NSMakeRange(Int(previousState.cursorIndex), 0),
                 replacementRange: NSMakeRange(NSNotFound, NSNotFound))
@@ -831,7 +911,8 @@ extension McBopomofoInputMethodController {
         if let previous = previous as? InputState.NotEmpty {
             commit(text: previous.composingBuffer, client: client)
         }
-        client.setMarkedText(
+        setMarkedText(
+                client: client,
             composingBuffer, selectionRange: NSMakeRange(composingBuffer.utf16.count, 0),
             replacementRange: NSMakeRange(NSNotFound, NSNotFound))
     }
@@ -851,7 +932,8 @@ extension McBopomofoInputMethodController {
         }
         // the selection range is where the cursor is, with the length being 0 and replacement range NSNotFound,
         // i.e. the client app needs to take care of where to put this composing buffer
-        client.setMarkedText(
+        setMarkedText(
+                client: client,
             "", selectionRange: NSMakeRange(0, 0),
             replacementRange: NSMakeRange(NSNotFound, NSNotFound))
         show(candidateWindowWith: state, client: client)

@@ -169,6 +169,14 @@ final class PreferencesViewModel: NSObject, ObservableObject {
         }
     }
 
+    var commonSentencesEnabled: Bool {
+        get { Preferences.commonSentencesEnabled }
+        set {
+            objectWillChange.send()
+            Preferences.commonSentencesEnabled = newValue
+        }
+    }
+
     var secureInputReminderEnabled: Bool {
         get { Preferences.secureInputReminderEnabled }
         set {

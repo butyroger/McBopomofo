@@ -87,9 +87,13 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
   <a href="#mixed">中英混打細節</a>
   <a href="#english">英文聯想</a>
   <a href="#numbers">數字與算式</a>
+  <a href="#sentences">常用句</a>
+  <a href="#candidates">候選字調整</a>
   <a href="#templates">文字範本</a>
   <a href="#symbols">符號表與 emoji</a>
   <a href="#learning">自動學習</a>
+  <a href="#vocabulary">管理詞彙</a>
+  <a href="#floating">浮動組字窗</a>
   <a href="#mode">中英提示與模式圖示</a>
   <a href="#secure-input">輸入法變灰（安全輸入）</a>
   <a href="#settings">偏好設定</a>
@@ -203,6 +207,31 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
 </div>
 </section>
 
+<section id="sentences">
+<h2>常用句</h2>
+<p>同一句送出三次，就會記住這句。之後在句首或標點後打出開頭兩個字以上，游標旁會提示後半句，按 <kbd>Tab</kbd> 整句接上。</p>
+<div class="examples">
+  <div class="example"><span class="in">謝謝 <kbd>Tab</kbd></span><span class="out">謝謝您的耐心等候</span></div>
+</div>
+<ul>
+  <li>句子要 6 到 40 個字（英文單字算一個字），不能有標點；有標點時會分成幾句分別記。</li>
+  <li>約三個月沒用到會自動忘掉，用得越多次留得越久。</li>
+  <li>記住的句子存在詞庫的 <code>learning/sentences/</code>，多台 Mac 共用。</li>
+  <li>可以在「管理詞彙」的常用句分頁查看、刪除，或直接加入句子（立即生效、不會被遺忘）。偏好設定「中英混打」可關閉。</li>
+</ul>
+</section>
+
+<section id="candidates">
+<h2>候選字調整</h2>
+<p>在候選字視窗反白某個字詞時：</p>
+<ul>
+  <li><kbd>+</kbd> 或 <kbd>=</kbd>：提高排序，以後優先出現。</li>
+  <li><kbd>-</kbd> 或 <kbd>_</kbd>：排除，以後不再出現。單字也可以，例如排除「你」，打 ㄋㄧˇ 就會先出現「妳」。</li>
+  <li><kbd>?</kbd>：用辭典查詢。</li>
+</ul>
+<p class="note">提高排序和排除都會先跳出確認；調整的結果可以在「管理詞彙」的中文詞彙、排除詞彙分頁改回來。</p>
+</section>
+
 <section id="templates">
 <h2>文字範本</h2>
 <ul>
@@ -233,6 +262,26 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
   <li>學習資料存在詞庫資料夾的 <code>learning/</code>，詞庫放在 iCloud 雲碟時，多台 Mac 共用並合併。</li>
   <li>不想要的詞可以從選單「編輯要排除的詞彙」排除，排除後不會再被自動加回來。</li>
 </ul>
+</section>
+
+<section id="vocabulary">
+<h2>管理詞彙</h2>
+<p>從輸入法選單「管理詞彙…」開啟，不用再直接編輯文字檔。分頁：</p>
+<ul>
+  <li><b>中文詞彙</b>：自訂詞優先出現在候選字。輸入詞會自動帶出注音，破音字可以自己改。</li>
+  <li><b>排除詞彙</b>：永遠不會出現在候選字的詞。</li>
+  <li><b>英文詞彙</b>：英文聯想（Tab）優先列出的字；打過兩次以上的字會自動列在這裡。</li>
+  <li><b>常用句</b>：已記住和還在累積次數的句子。</li>
+  <li><b>暫存詞</b>：選過一次、還在 30 天期限內的詞，可以刪除或直接加入中文詞彙。</li>
+  <li><b>文字範本</b>：按 ` 後輸入代碼插入的內容。</li>
+</ul>
+<p class="note">在一台 Mac 刪除的英文字、常用句、暫存詞，其他 Mac 也會一起刪除。</p>
+</section>
+
+<section id="floating">
+<h2>浮動組字窗</h2>
+<p>有些 App 會在組字途中自己改動內容，造成漏字或補字重複（常見於網頁裡的編輯器）。遇到這種 App，在輸入法選單勾選「此 App 使用浮動組字窗」：組字中的字改顯示在游標上方的小視窗，按 <kbd>Enter</kbd>、標點等送出時才交給 App。</p>
+<p class="note">設定是以 App 為單位，例如在 Chrome 勾選後，整個 Chrome 都會使用。再點一次取消。</p>
 </section>
 
 <section id="mode">
@@ -286,6 +335,8 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
 <ul>
   <li><kbd>`</kbd>：文字範本、數字快打；再按一次開啟符號表。</li>
   <li><kbd>Tab</kbd>（英文時）：英文聯想。</li>
+  <li><kbd>Tab</kbd>（有常用句提示時）：接上後半句。</li>
+  <li><kbd>+</kbd> <kbd>-</kbd> <kbd>?</kbd>（候選字視窗）：提高排序、排除、查辭典。</li>
   <li><kbd>=</kbd>（算式後）：自動算出答案。</li>
   <li><kbd>Caps Lock</kbd>：切換英文小寫。</li>
   <li><kbd>Shift</kbd> + 字母：直接打英文。</li>

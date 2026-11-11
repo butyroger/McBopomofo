@@ -42,6 +42,8 @@ private let kAutoSpaceBetweenChineseAndEnglishKey = "AutoSpaceBetweenChineseAndE
 private let kHalfWidthPunctuationAfterEnglishKey = "HalfWidthPunctuationAfterEnglish"
 private let kFixEnglishWordCaseKey = "FixEnglishWordCase"
 private let kSecureInputReminderEnabledKey = "SecureInputReminderEnabled"
+private let kCommonSentencesEnabledKey = "CommonSentencesEnabled"
+private let kFloatingCompositionBundleIDsKey = "FloatingCompositionBundleIDs"
 private let kShowChineseEnglishModeIconKey = "ShowChineseEnglishModeIcon"
 private let kShowFullHalfWidthModeIconKey = "ShowFullHalfWidthModeIcon"
 private let kChooseCandidateUsingSpaceKey = "ChooseCandidateUsingSpaceKey"
@@ -242,6 +244,8 @@ class Preferences: NSObject {
             kHalfWidthPunctuationAfterEnglishKey,
             kFixEnglishWordCaseKey,
             kSecureInputReminderEnabledKey,
+            kCommonSentencesEnabledKey,
+            kFloatingCompositionBundleIDsKey,
             kShowChineseEnglishModeIconKey,
             kShowFullHalfWidthModeIconKey,
             kChooseCandidateUsingSpaceKey,
@@ -363,6 +367,17 @@ class Preferences: NSObject {
     /// makes macOS disable third-party input methods.
     @UserDefault(key: kSecureInputReminderEnabledKey, defaultValue: true)
     @objc static var secureInputReminderEnabled: Bool
+
+    /// Remembers the sentences sent three times, and suggests the rest of one
+    /// after typing its beginning, to be taken with Tab.
+    @UserDefault(key: kCommonSentencesEnabledKey, defaultValue: true)
+    @objc static var commonSentencesEnabled: Bool
+
+    /// The apps that use the floating composition window: the text being
+    /// composed is shown in a small window next to the cursor, and the app
+    /// only gets the text committed.
+    @UserDefault(key: kFloatingCompositionBundleIDsKey, defaultValue: [])
+    @objc static var floatingCompositionBundleIDs: [String]
 
     /// Shows "中" or "英" in the menu bar.
     @UserDefault(key: kShowChineseEnglishModeIconKey, defaultValue: true)
@@ -726,6 +741,12 @@ extension Preferences {
         )
         lines.append(
             "  - Secure Input Reminder: \(Preferences.secureInputReminderEnabled ? "Enabled" : "Disabled")"
+        )
+        lines.append(
+            "  - Common Sentences: \(Preferences.commonSentencesEnabled ? "Enabled" : "Disabled")"
+        )
+        lines.append(
+            "  - Floating Composition Apps: \(Preferences.floatingCompositionBundleIDs.count)"
         )
         lines.append(
             "  - Mode Icons: Chinese/English \(Preferences.showChineseEnglishModeIcon ? "Shown" : "Hidden"), Full/Half-width \(Preferences.showFullHalfWidthModeIcon ? "Shown" : "Hidden")"

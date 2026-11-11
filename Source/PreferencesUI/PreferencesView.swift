@@ -528,6 +528,9 @@ private struct BasicPreferencesView: View {
                     Toggle(
                         localized("Fix the case of words like iPhone upon a space"),
                         isOn: $preferences.fixEnglishWordCase)
+                    Toggle(
+                        localized("Remember sentences typed often, and complete them with Tab"),
+                        isOn: $preferences.commonSentencesEnabled)
                 }
             }
 

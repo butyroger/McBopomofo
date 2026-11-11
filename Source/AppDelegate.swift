@@ -220,6 +220,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NonModalAlertWindowControlle
         checkForUpdate()
     }
 
+    private var vocabularyManagerWindowController: VocabularyManagerWindowController?
+
+    @objc func showVocabularyManager() {
+        if vocabularyManagerWindowController == nil {
+            vocabularyManagerWindowController = VocabularyManagerWindowController()
+        }
+        vocabularyManagerWindowController?.showAndActivate()
+    }
+
     @MainActor
     @objc func showPreferences() {
         if preferencesWindowController == nil {

@@ -50,6 +50,11 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL)isTemporaryPhrase:(NSString *)phrase;
 + (void)addTemporaryPhrase:(NSString *)phrase;
 + (void)removeTemporaryPhrase:(NSString *)phrase;
+/// All the temporary phrases of all devices, as "value reading" to the time
+/// they were picked.
++ (NSDictionary<NSString *, NSNumber *> *)allTemporaryPhrases;
+/// Removes a temporary phrase on all devices.
++ (void)forgetTemporaryPhrase:(NSString *)phrase;
 
 /// Learned English words, as a folder for each device to write its own file.
 @property (class, readonly, nonatomic) NSString *englishWordsFolderPath;

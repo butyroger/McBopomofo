@@ -186,6 +186,34 @@ import AppKit
         return completions.contains { $0.lowercased().hasPrefix(lowercased) && $0.count > lowercased.count }
     }
 
+    // MARK: - Vocabulary manager
+
+    /// The words typed or added, with the counts of all the devices.
+    static func allWords() -> [(word: String, count: Int)] {
+        lastLoaded = Date.distantPast
+        loadIfNeeded()
+        return counts.map { (word: $0.key, count: $0.value) }
+            .sorted { $0.word.lowercased() < $1.word.lowercased() }
+    }
+
+    /// Adds a word by the user, which is listed first in the completions.
+    static func add(_ word: String) {
+        loadIfNeeded()
+        RemovedEntries.remove(kind: RemovedEntries.english, key: word)
+        let existing = localCounts?[word] ?? 0
+        localCounts?[word] = max(existing, 2)
+        save()
+        lastLoaded = Date.distantPast
+    }
+
+    static func remove(_ word: String) {
+        loadIfNeeded()
+        localCounts?.removeValue(forKey: word)
+        save()
+        RemovedEntries.add(kind: RemovedEntries.english, key: word)
+        lastLoaded = Date.distantPast
+    }
+
     private static func isSubsequence(_ letters: String, of word: String) -> Bool {
         var iterator = word.makeIterator()
         for letter in letters {
@@ -235,7 +263,10 @@ import AppKit
                 merged[word, default: 0] += count
             }
         }
-        counts = merged
+        // Words removed in the vocabulary manager, maybe on another device.
+        counts = merged.filter {
+            RemovedEntries.removedTime(kind: RemovedEntries.english, key: $0.key) == 0
+        }
         lastLoaded = Date()
     }
 

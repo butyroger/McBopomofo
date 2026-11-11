@@ -837,6 +837,12 @@ static NSMutableDictionary<NSString *, NSNumber *> *LTReadTemporaryPhrases(NSStr
     if (gLocalTemporaryPhrases == nil) {
         gLocalTemporaryPhrases = LTReadTemporaryPhrases(localPath);
     }
+    // Phrases removed in the vocabulary manager, maybe on another device.
+    for (NSString *phrase in [gLocalTemporaryPhrases allKeys]) {
+        if ([RemovedEntries removedTimeWithKind:RemovedEntries.temporaryPhrase key:phrase] >= [gLocalTemporaryPhrases[phrase] doubleValue]) {
+            [gLocalTemporaryPhrases removeObjectForKey:phrase];
+        }
+    }
     gTemporaryPhrases = [gLocalTemporaryPhrases mutableCopy];
     NSString *folderPath = [localPath stringByDeletingLastPathComponent];
     for (NSString *filename in [[NSFileManager defaultManager] contentsOfDirectoryAtPath:folderPath error:nil]) {
@@ -845,6 +851,10 @@ static NSMutableDictionary<NSString *, NSNumber *> *LTReadTemporaryPhrases(NSStr
         }
         NSDictionary *phrases = LTReadTemporaryPhrases([folderPath stringByAppendingPathComponent:filename]);
         for (NSString *phrase in phrases) {
+            // Removed in the vocabulary manager after it was picked.
+            if ([RemovedEntries removedTimeWithKind:RemovedEntries.temporaryPhrase key:phrase] >= [phrases[phrase] doubleValue]) {
+                continue;
+            }
             if ([gTemporaryPhrases[phrase] doubleValue] < [phrases[phrase] doubleValue]) {
                 gTemporaryPhrases[phrase] = phrases[phrase];
             }
@@ -893,6 +903,23 @@ static NSMutableDictionary<NSString *, NSNumber *> *LTReadTemporaryPhrases(NSStr
     NSNumber *now = @([NSDate date].timeIntervalSince1970);
     gLocalTemporaryPhrases[phrase] = now;
     gTemporaryPhrases[phrase] = now;
+    [self _applyTemporaryPhrases];
+    [self _saveTemporaryPhrases];
+}
+
++ (NSDictionary<NSString *, NSNumber *> *)allTemporaryPhrases
+{
+    [self userOverrideModel];
+    [self _reloadTemporaryPhrases];
+    return [gTemporaryPhrases copy];
+}
+
++ (void)forgetTemporaryPhrase:(NSString *)phrase
+{
+    [self userOverrideModel];
+    [RemovedEntries addWithKind:RemovedEntries.temporaryPhrase key:phrase];
+    [gLocalTemporaryPhrases removeObjectForKey:phrase];
+    [gTemporaryPhrases removeObjectForKey:phrase];
     [self _applyTemporaryPhrases];
     [self _saveTemporaryPhrases];
 }

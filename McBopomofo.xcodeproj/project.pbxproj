@@ -62,6 +62,9 @@
 		D4314F0D2ED3690F0071DD71 /* NumberInputHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4314F0C2ED369090071DD71 /* NumberInputHelper.swift */; };
 		A1B2C3D40000000000000003 /* QuickNumbers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000004 /* QuickNumbers.swift */; };
 		A1B2C3D40000000000000001 /* EnglishWords.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000002 /* EnglishWords.swift */; };
+		A1B2C3D40000000000000015 /* FloatingComposition.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000016 /* FloatingComposition.swift */; };
+		A1B2C3D40000000000000013 /* VocabularyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000014 /* VocabularyManager.swift */; };
+		A1B2C3D40000000000000011 /* CommonSentences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000012 /* CommonSentences.swift */; };
 		D436E23F2CD20BA700C6155D /* AssociatedPhrasesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D436E23E2CD20B9E00C6155D /* AssociatedPhrasesTests.swift */; };
 		D43737C92DF9C35800D9707C /* InputMethodController+KeyHandlerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43737C82DF9C35100D9707C /* InputMethodController+KeyHandlerDelegate.swift */; };
 		D43737CB2DF9C48300D9707C /* InputMethodController+CandidateControllerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43737CA2DF9C48200D9707C /* InputMethodController+CandidateControllerDelegate.swift */; };
@@ -214,6 +217,9 @@
 		D4314F0C2ED369090071DD71 /* NumberInputHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumberInputHelper.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000004 /* QuickNumbers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNumbers.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000002 /* EnglishWords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnglishWords.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000016 /* FloatingComposition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingComposition.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000014 /* VocabularyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularyManager.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000012 /* CommonSentences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommonSentences.swift; sourceTree = "<group>"; };
 		D436E23E2CD20B9E00C6155D /* AssociatedPhrasesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssociatedPhrasesTests.swift; sourceTree = "<group>"; };
 		D43737C82DF9C35100D9707C /* InputMethodController+KeyHandlerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "InputMethodController+KeyHandlerDelegate.swift"; sourceTree = "<group>"; };
 		D43737CA2DF9C48200D9707C /* InputMethodController+CandidateControllerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "InputMethodController+CandidateControllerDelegate.swift"; sourceTree = "<group>"; };
@@ -348,6 +354,9 @@
 				D4314F0C2ED369090071DD71 /* NumberInputHelper.swift */,
 				A1B2C3D40000000000000004 /* QuickNumbers.swift */,
 				A1B2C3D40000000000000002 /* EnglishWords.swift */,
+				A1B2C3D40000000000000016 /* FloatingComposition.swift */,
+				A1B2C3D40000000000000014 /* VocabularyManager.swift */,
+				A1B2C3D40000000000000012 /* CommonSentences.swift */,
 				D427F76B278CA1BA004A2160 /* AppDelegate.swift */,
 				D44FB74427915555003C80A6 /* Preferences.swift */,
 				D47F7DCF278C0897002F9DD7 /* NonModalAlertWindowController.swift */,
@@ -756,6 +765,9 @@
 				D4314F0D2ED3690F0071DD71 /* NumberInputHelper.swift in Sources */,
 				A1B2C3D40000000000000003 /* QuickNumbers.swift in Sources */,
 				A1B2C3D40000000000000001 /* EnglishWords.swift in Sources */,
+				A1B2C3D40000000000000015 /* FloatingComposition.swift in Sources */,
+				A1B2C3D40000000000000013 /* VocabularyManager.swift in Sources */,
+				A1B2C3D40000000000000011 /* CommonSentences.swift in Sources */,
 				D4E569DC27A34D0E00AC2CEF /* KeyHandler.mm in Sources */,
 				6A4F5F982879E838008C4307 /* reading_grid.cpp in Sources */,
 				D47F7DD0278C0897002F9DD7 /* NonModalAlertWindowController.swift in Sources */,

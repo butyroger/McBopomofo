@@ -82,6 +82,12 @@ static bool IsHalfWidthAlphanumericReading(const std::string &reading)
 /// and other special readings start with "_".
 static bool IsChineseReading(const std::string &reading)
 {
+    // A Chinese character put as is, such as from a common sentence.
+    const std::string literal = McBopomofo::McBopomofoLM::kLiteralKeyPrefix;
+    if (reading.size() == literal.size() + 3 && reading.rfind(literal, 0) == 0) {
+        unsigned char lead = (unsigned char)reading[literal.size()];
+        return lead >= 0xE3 && lead <= 0xE9;
+    }
     return !reading.empty() && reading[0] != '_' && reading != " ";
 }
 
@@ -118,6 +124,10 @@ static bool IsChineseReading(const std::string &reading)
     // Phrases picked in this composition, as "value reading", which have
     // just become temporary phrases and are not typed again yet.
     NSMutableSet<NSString *> *_phrasesPickedInComposition;
+
+    // The rest of a common sentence suggested by the last inputting state
+    // built, to be taken with Tab.
+    NSString *_sentenceCompletion;
 }
 
 @synthesize delegate = _delegate;
@@ -426,6 +436,12 @@ static bool IsChineseReading(const std::string &reading)
     if (englishWords.count) {
         [EnglishWords record:englishWords];
     }
+
+    NSMutableString *committed = [NSMutableString string];
+    for (const auto &node : _latestWalk.nodes) {
+        [committed appendString:@(node->value().c_str())];
+    }
+    [CommonSentences record:committed];
 }
 
 // Turns a multi-character phrase into a user phrase once the user has picked
@@ -1106,6 +1122,19 @@ static const size_t kLearnPhraseThreshold = 2;
         }
         state = [marking convertToInputting];
         stateCallback(state);
+    }
+
+    // MARK: Common sentences
+    // Tab takes the rest of the common sentence suggested.
+    if (input.isTab && !input.isShiftHold && [state isKindOfClass:[InputStateInputting class]] && _bpmfReadingBuffer->isEmpty()) {
+        [self buildInputtingState];
+        if (_sentenceCompletion.length) {
+            NSString *completion = _sentenceCompletion;
+            [self _setSmartEnglishMode:NO];
+            [self _insertLiteralText:completion];
+            stateCallback([self buildInputtingState]);
+            return YES;
+        }
     }
 
     BOOL keyConsumedByReading = NO;
@@ -2376,13 +2405,11 @@ static const size_t kLearnPhraseThreshold = 2;
                 return YES;
             }
 
-            for (NSString *invalidPrefix in invalidPrefixArray) {
-                if ([reading hasPrefix:invalidPrefix]) {
-                    errorCallback();
-                    return YES;
-                }
-            }
-            if ([reading containsString:@"-"] == NO) {
+            // Symbols, punctuation, English and the like cannot be boosted or
+            // excluded, but a single character can, such as excluding 你 to
+            // have 妳 first.
+            if ([reading hasPrefix:@"_"] || candidate.value.length == 0
+                || [candidate.value rangeOfCharacterFromSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]].location != NSNotFound) {
                 errorCallback();
                 return YES;
             }
@@ -3397,6 +3424,16 @@ static const size_t kLearnPhraseThreshold = 2;
     NSString *composedText = [head stringByAppendingString:[reading stringByAppendingString:tail]];
     NSInteger cursorIndex = head.length + reading.length;
     InputStateInputting *newState = [[InputStateInputting alloc] initWithComposingBuffer:composedText cursorIndex:cursorIndex];
+
+    // Suggest the rest of a common sentence when typing at the end.
+    _sentenceCompletion = nil;
+    if (_inputMode == InputModeBopomofo && tooltip.length == 0 && reading.length == 0 && tail.length == 0 && builderCursor == _grid->length()) {
+        NSString *completion = [CommonSentences completionForTypedText:head];
+        if (completion.length) {
+            _sentenceCompletion = completion;
+            tooltip = [NSString stringWithFormat:NSLocalizedString(@"Tab: %@", @""), completion];
+        }
+    }
     newState.tooltip = tooltip;
     return newState;
 }
