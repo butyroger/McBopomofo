@@ -24,6 +24,7 @@
 import Carbon
 import Cocoa
 import FSEventStreamHelper
+import IOKit
 import InputMethodKit
 import NotifierUI
 
@@ -214,6 +215,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NonModalAlertWindowControlle
         enableBopomofoFontAnnotationSupportMenuItemIfRelevantFontsInstalled()
 
         ChineseEnglishSwitchReminder.shared.start()
+        SecureInputMonitor.shared.start()
 
         checkForUpdate()
     }
@@ -600,5 +602,125 @@ class ChineseEnglishSwitchReminder: NSObject {
     @objc private func toggleHalfWidthPunctuation(_ sender: Any?) {
         _ = Preferences.toggleHalfWidthPunctuationEnabled()
         update()
+    }
+}
+
+/// Tells the user which app has turned on Secure Input for a while. While it
+/// is on, macOS disables all third-party input methods, so McBopomofo turns
+/// gray in the input menu and cannot be selected. An app may leave it on, such
+/// as a password manager or a password field that is never closed.
+class SecureInputMonitor: NSObject, NonModalAlertWindowControllerDelegate {
+    static let shared = SecureInputMonitor()
+
+    private static let checkInterval: TimeInterval = 10
+    /// How long Secure Input has to be on before the user is told, since
+    /// typing a password in a password field turns it on for a short while.
+    private static let delay: TimeInterval = 90
+
+    private var timer: Timer?
+    private var since: Date?
+    private var notified = false
+
+    func start() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: Self.checkInterval, repeats: true) {
+            [weak self] _ in
+            self?.check()
+        }
+    }
+
+    private func check() {
+        // The PID reported may change while it is on, such as to the
+        // frontmost app, so only the time it has been on counts.
+        guard Preferences.secureInputReminderEnabled, let pid = Self.secureInputPID(),
+            !Self.isScreenLocked()
+        else {
+            since = nil
+            notified = false
+            return
+        }
+        guard let since else {
+            since = Date()
+            return
+        }
+        if !notified && Date().timeIntervalSince(since) >= Self.delay {
+            notified = true
+            showAlert(pid: pid)
+        }
+    }
+
+    private func showAlert(pid: pid_t) {
+        let isRunning = kill(pid, 0) == 0 || errno == EPERM
+        let name = Self.appName(pid: pid)
+        let content: String
+        if !isRunning {
+            content = String(
+                format: NSLocalizedString(
+                    "The app that turned on Secure Input (PID %d) has quit, but macOS has not turned it off. Third-party input methods, including McBopomofo, cannot be used until then.\n\nPlease log out and log in again.",
+                    comment: ""), pid)
+        } else if name == "loginwindow" {
+            content = NSLocalizedString(
+                "macOS reports that the login window has turned on Secure Input, which usually comes from a password manager or a password field in a browser. Third-party input methods, including McBopomofo, cannot be used while it is on.\n\nPlease try:\n1. Quit the password manager, such as 1Password, completely.\n2. Close the pages or windows waiting for a password.\n3. Lock the screen and unlock it with your password.\n4. Log out and log in again.",
+                comment: "")
+        } else {
+            content = String(
+                format: NSLocalizedString(
+                    "\"%@\" (PID %d) has turned on Secure Input for more than a minute and a half. Third-party input methods, including McBopomofo, cannot be used while it is on.\n\nIf McBopomofo is gray in the input menu, please try:\n1. Close the pages or windows in the app waiting for a password.\n2. Quit the app completely and open it again.\n3. For a terminal, turn off \"Secure Keyboard Entry\".\n4. Lock the screen and unlock it, or log out and log in again.\n\nThe app name reported by macOS may not be accurate.",
+                    comment: ""), name, pid)
+        }
+        NonModalAlertWindowController.shared.show(
+            title: NSLocalizedString("Secure Input Is On", comment: ""), content: content,
+            confirmButtonTitle: NSLocalizedString("OK", comment: ""),
+            cancelButtonTitle: NSLocalizedString("Don't Remind Me Again", comment: ""),
+            cancelAsDefault: false, delegate: self)
+    }
+
+    func nonModalAlertWindowControllerDidConfirm(_ controller: NonModalAlertWindowController) {
+    }
+
+    func nonModalAlertWindowControllerDidCancel(_ controller: NonModalAlertWindowController) {
+        Preferences.secureInputReminderEnabled = false
+    }
+
+    /// The process that has turned on Secure Input in the session of the
+    /// user, as reported by the I/O Registry.
+    static func secureInputPID() -> pid_t? {
+        let root = IORegistryGetRootEntry(kIOMainPortDefault)
+        defer { IOObjectRelease(root) }
+        guard
+            let property = IORegistryEntryCreateCFProperty(
+                root, "IOConsoleUsers" as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue(),
+            let users = property as? [[String: Any]]
+        else {
+            return nil
+        }
+        let uid = Int(getuid())
+        for user in users {
+            if let userID = user["kCGSSessionUserIDKey"] as? Int, userID != uid {
+                continue
+            }
+            if let pid = user["kCGSSessionSecureInputPID"] as? Int, pid > 0 {
+                return pid_t(pid)
+            }
+        }
+        return nil
+    }
+
+    private static func isScreenLocked() -> Bool {
+        guard let session = CGSessionCopyCurrentDictionary() as? [String: Any] else {
+            return false
+        }
+        return (session["CGSSessionScreenIsLocked"] as? Bool) ?? false
+    }
+
+    private static func appName(pid: pid_t) -> String {
+        if let name = NSRunningApplication(processIdentifier: pid)?.localizedName {
+            return name
+        }
+        var buffer = [CChar](repeating: 0, count: 1024)
+        if proc_name(pid, &buffer, UInt32(buffer.count)) > 0 {
+            return String(cString: buffer)
+        }
+        return "PID \(pid)"
     }
 }

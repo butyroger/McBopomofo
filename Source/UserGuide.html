@@ -84,12 +84,14 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
   <h2>目錄</h2>
   <a href="#basic">基本操作</a>
   <a href="#smart-switch">智慧中英切換</a>
+  <a href="#mixed">中英混打細節</a>
   <a href="#english">英文聯想</a>
   <a href="#numbers">數字與算式</a>
   <a href="#templates">文字範本</a>
   <a href="#symbols">符號表與 emoji</a>
   <a href="#learning">自動學習</a>
   <a href="#mode">中英提示與模式圖示</a>
+  <a href="#secure-input">輸入法變灰（安全輸入）</a>
   <a href="#settings">偏好設定</a>
   <a href="#files">詞庫檔案</a>
   <a href="#shortcuts">快速鍵一覽</a>
@@ -113,7 +115,7 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
 <h2>智慧中英切換</h2>
 <p>不用按 <kbd>Shift</kbd> 或 <kbd>Caps Lock</kbd> 也能中英數混打：打的鍵組不成注音時，會自動變成英文。</p>
 <div class="examples">
-  <div class="example"><span class="in">你用過這個 app?</span><span class="out">你用過這個app?</span></div>
+  <div class="example"><span class="in">你用過這個 app?</span><span class="out">你用過這個 app?</span></div>
   <div class="example"><span class="in">ChatGPT 很好用</span><span class="out">ChatGPT 很好用</span></div>
   <div class="example"><span class="in">2026 年</span><span class="out">2026年</span></div>
   <div class="example"><span class="in">ok?</span><span class="out">ok?</span></div>
@@ -132,6 +134,39 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
   <li>英文和中文一起留在組字區，按 <kbd>Enter</kbd> 一起送出。</li>
 </ul>
 <p class="note">很短的英文可能剛好是合法注音，例如許氏鍵盤的 <code>a</code> 加空白會打成「疵」，這時請改用 <kbd>Shift</kbd> 或 <kbd>Caps Lock</kbd>。本功能可在偏好設定關閉。</p>
+</section>
+
+<section id="mixed">
+<h2>中英混打細節</h2>
+<h3>中英文之間自動加空格</h3>
+<p>中文後面接英文、英文後面接中文時，自動在中間加一個空格。</p>
+<div class="examples">
+  <div class="example"><span class="in">你好hello</span><span class="out">你好 hello</span></div>
+  <div class="example"><span class="in">用iPhone拍</span><span class="out">用 iPhone 拍</span></div>
+</div>
+<ul>
+  <li>數字不加空格，例如「2026年」「3個」。</li>
+  <li>用 <kbd>Backspace</kbd> 把英文刪光時，自動加的空格也一起刪掉。</li>
+</ul>
+<h3>英文、數字後的標點用半形</h3>
+<p>緊接在英文字母或數字後面的標點自動打半形，接在中文後面的維持全形。</p>
+<div class="examples">
+  <div class="example"><span class="in">價格是300.</span><span class="out">價格是300.</span></div>
+  <div class="example"><span class="in">好,</span><span class="out">好，</span></div>
+</div>
+<p class="note">想在英文、數字後面打全形標點，請按住 <kbd>Control</kbd> 再打標點，例如 <kbd>Control</kbd>+<kbd>,</kbd> 一律是「，」。</p>
+<h3>英文大小寫修正</h3>
+<p>英文打完按 <kbd>空白</kbd> 時，像 iPhone、OpenAI 這類中間有大寫的字，即使打成小寫也會自動改正。</p>
+<div class="examples">
+  <div class="example"><span class="in">iphone <kbd>空白</kbd></span><span class="out">iPhone</span></div>
+  <div class="example"><span class="in">openai <kbd>空白</kbd></span><span class="out">OpenAI</span></div>
+</div>
+<ul>
+  <li>想保留小寫就按 <kbd>Enter</kbd> 送出，不會修正。</li>
+  <li>除了內建的常見字（iPhone、macOS、GitHub、YouTube……），你用大寫打過兩次以上的字（例如 ButyPOS）也會自動修正。</li>
+  <li>只有字首大寫（Apple）或全大寫（NASA）的字不會修正。</li>
+</ul>
+<p class="note">以上三項都可以在偏好設定的「中英混打」個別關閉。</p>
 </section>
 
 <section id="english">
@@ -207,6 +242,19 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
 </ul>
 </section>
 
+<section id="secure-input">
+<h2>輸入法變灰（安全輸入）</h2>
+<p>macOS 有防側錄的「安全輸入」，某個程式開啟後，所有第三方輸入法（包括小麥）都會變灰、無法切換，只剩系統內建的輸入法能用。程式沒有正常解除時，就會一直卡住。</p>
+<p>安全輸入持續開啟超過一分半鐘時，小麥會跳出提醒，說明是哪個程式開啟的，以及該怎麼處理。常見原因：</p>
+<ul>
+  <li>密碼管理程式（例如 1Password）。</li>
+  <li>瀏覽器裡沒關的登入頁、密碼欄位。</li>
+  <li>終端機開啟了「安全鍵盤輸入」。</li>
+</ul>
+<p>處理方式：依序試試關閉等待輸入密碼的頁面、完全結束該程式、鎖定螢幕再解鎖，最後是登出再登入。</p>
+<p class="note">macOS 回報的程式名稱不一定準確，有時會回報成目前在前景的程式。提醒視窗按「不再提醒」，或在偏好設定關閉「安全輸入提醒」，就不會再跳出。</p>
+</section>
+
 <section id="settings">
 <h2>偏好設定</h2>
 <p>從輸入法選單「小麥注音偏好設定」開啟。本版新增的項目：</p>
@@ -215,6 +263,8 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
   <li><b>中英切換提醒</b>：開啟／關閉。</li>
   <li><b>智慧中英切換</b>：不按 Shift、Caps Lock 也能打英文。</li>
   <li><b>模式狀態顯示</b>：中／英模式圖示（預設開）、全／半形模式圖示（預設關）。</li>
+  <li><b>中英混打</b>：中英文之間自動加空格、英文數字後的標點用半形、修正英文大小寫（預設都開）。</li>
+  <li><b>安全輸入提醒</b>：輸入法被停用時告訴你是哪個程式造成的（預設開）。</li>
 </ul>
 </section>
 

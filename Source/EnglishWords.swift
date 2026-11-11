@@ -100,6 +100,47 @@ import AppKit
         return unique
     }
 
+    /// Well-known words with uppercase letters after the first one, whose
+    /// case is fixed even if they have never been typed.
+    private static let wellKnownMixedCaseWords: [String: String] = {
+        let words = [
+            "iPhone", "iPad", "iPod", "iMac", "iCloud", "iMessage", "iTunes", "iOS", "iPadOS",
+            "macOS", "watchOS", "tvOS", "visionOS", "AirPods", "AirDrop", "AirPlay", "AirTag",
+            "MacBook", "FaceTime", "AppleCare", "HomePod", "CarPlay",
+            "OpenAI", "ChatGPT", "DeepSeek", "GitHub", "GitLab", "YouTube", "LinkedIn", "PayPal",
+            "WhatsApp", "TikTok", "WeChat", "PowerPoint", "OneDrive", "OneNote", "SharePoint",
+            "FileMaker", "JavaScript", "TypeScript", "PostgreSQL", "MySQL", "MariaDB", "SQLite",
+            "MongoDB", "WordPress", "WooCommerce", "PlayStation", "SmartThings", "DevOps",
+            "eBay", "eSIM", "McDonald", "LaTeX", "PhD", "VoIP",
+        ]
+        var result: [String: String] = [:]
+        for word in words {
+            result[word.lowercased()] = word
+        }
+        return result
+    }()
+
+    /// Whether a word has an uppercase letter after the first one, but is not
+    /// all uppercase, like iPhone and OpenAI, but not Apple or NASA.
+    private static func isMixedCase(_ word: String) -> Bool {
+        word.dropFirst().contains(where: \.isUppercase) && word != word.uppercased()
+    }
+
+    /// The case to use for a word typed in lowercase, like "iPhone" for
+    /// "iphone": the word typed most often in that case, or a well-known one.
+    @objc static func preferredCase(for word: String) -> String? {
+        guard word.count >= 2, word == word.lowercased() else {
+            return nil
+        }
+        loadIfNeeded()
+        // A word typed only once may be a typo.
+        let typed = counts.filter { $0.value >= 2 && $0.key.lowercased() == word && isMixedCase($0.key) }
+        if let best = typed.max(by: { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }) {
+            return best.key
+        }
+        return wellKnownMixedCaseWords[word]
+    }
+
     private static func isSubsequence(_ letters: String, of word: String) -> Bool {
         var iterator = word.makeIterator()
         for letter in letters {

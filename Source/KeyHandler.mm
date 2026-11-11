@@ -48,6 +48,43 @@
 InputMode InputModeBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Bopomofo";
 InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.PlainBopomofo";
 
+// MARK: - Mixed Chinese and English
+
+static const char kAutoSpaceReading[] = "_literal_ ";
+
+/// A letter put by the smart English mode, or an English word picked from the
+/// completions.
+static bool IsEnglishReading(const std::string &reading)
+{
+    const std::string literal = McBopomofo::McBopomofoLM::kLiteralKeyPrefix;
+    if (reading.rfind(McBopomofo::McBopomofoLM::kEnglishKeyPrefix, 0) == 0) {
+        return true;
+    }
+    return reading.size() == literal.size() + 1 && reading.rfind(literal, 0) == 0 && isalpha((unsigned char)reading.back());
+}
+
+/// An English letter or word, or a half-width digit.
+static bool IsHalfWidthAlphanumericReading(const std::string &reading)
+{
+    if (IsEnglishReading(reading)) {
+        return true;
+    }
+    const std::string literal = McBopomofo::McBopomofoLM::kLiteralKeyPrefix;
+    const std::string numpad = "_numpad_";
+    if ((reading.size() == literal.size() + 1 && reading.rfind(literal, 0) == 0)
+        || (reading.size() == numpad.size() + 1 && reading.rfind(numpad, 0) == 0)) {
+        return isdigit((unsigned char)reading.back());
+    }
+    return false;
+}
+
+/// A Bopomofo syllable, which gives a Chinese character. Punctuation, digits
+/// and other special readings start with "_".
+static bool IsChineseReading(const std::string &reading)
+{
+    return !reading.empty() && reading[0] != '_' && reading != " ";
+}
+
 @implementation KeyHandler {
     std::shared_ptr<Formosa::Gramambular2::LanguageModel> _emptySharedPtr;
 
@@ -631,6 +668,9 @@ static const size_t kLearnPhraseThreshold = 2;
 - (void)_insertLiteralText:(NSString *)text
 {
     __block BOOL inserted = NO;
+    if (text.length && [text characterAtIndex:0] < 0x80 && isalpha([text characterAtIndex:0])) {
+        inserted = [self _insertAutoSpaceIfNeededBeforeEnglish:YES];
+    }
     [text enumerateSubstringsInRange:NSMakeRange(0, text.length) options:NSStringEnumerationByComposedCharacterSequences usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
         std::string reading = std::string(McBopomofo::McBopomofoLM::kLiteralKeyPrefix) + substring.UTF8String;
         inserted = self->_grid->insertReading(reading) || inserted;
@@ -638,6 +678,86 @@ static const size_t kLearnPhraseThreshold = 2;
     if (inserted) {
         [self _walk];
     }
+}
+
+/// Puts a space between Chinese and English, like "你好 hello": before an
+/// English letter typed after Chinese, or before Chinese typed after English.
+- (BOOL)_insertAutoSpaceIfNeededBeforeEnglish:(BOOL)beforeEnglish
+{
+    if (!Preferences.autoSpaceBetweenChineseAndEnglish || _inputMode != InputModeBopomofo) {
+        return NO;
+    }
+    size_t cursor = _grid->cursor();
+    if (cursor == 0) {
+        return NO;
+    }
+    const std::string &previous = _grid->readings()[cursor - 1];
+    BOOL needed = beforeEnglish ? IsChineseReading(previous) : IsEnglishReading(previous);
+    if (!needed) {
+        return NO;
+    }
+    return _grid->insertReading(kAutoSpaceReading);
+}
+
+/// After deleting English with Backspace, also deletes the space put between
+/// it and the Chinese before, unless there is still English after the cursor.
+- (void)_removeAutoSpaceAfterDeletingEnglish
+{
+    size_t cursor = _grid->cursor();
+    const auto &readings = _grid->readings();
+    if (!Preferences.autoSpaceBetweenChineseAndEnglish || cursor < 2 || readings[cursor - 1] != kAutoSpaceReading || !IsChineseReading(readings[cursor - 2])) {
+        return;
+    }
+    if (cursor < readings.size() && IsEnglishReading(readings[cursor])) {
+        return;
+    }
+    _grid->deleteReadingBeforeCursor();
+}
+
+/// Fixes the case of the English word before the cursor, like "iphone" to
+/// "iPhone", with the words the user has typed and some well-known ones.
+- (void)_fixCaseOfEnglishWordBeforeCursor
+{
+    if (!Preferences.fixEnglishWordCase) {
+        return;
+    }
+    const std::string prefix = McBopomofo::McBopomofoLM::kLiteralKeyPrefix;
+    const auto &readings = _grid->readings();
+    size_t cursor = _grid->cursor();
+    size_t start = cursor;
+    while (start > 0) {
+        const std::string &reading = readings[start - 1];
+        if (reading.size() != prefix.size() + 1 || reading.rfind(prefix, 0) != 0 || !isalpha((unsigned char)reading.back())) {
+            break;
+        }
+        start--;
+    }
+    if (cursor - start < 2) {
+        return;
+    }
+    std::string word;
+    for (size_t i = start; i < cursor; i++) {
+        word += readings[i].back();
+    }
+    NSString *fixed = [EnglishWords preferredCaseFor:[NSString stringWithUTF8String:word.c_str()]];
+    if (fixed == nil || fixed.length != word.size() || [fixed isEqualToString:[NSString stringWithUTF8String:word.c_str()]]) {
+        return;
+    }
+    for (size_t i = start; i < cursor; i++) {
+        _grid->deleteReadingBeforeCursor();
+    }
+    [self _insertLiteralText:fixed];
+}
+
+/// Whether the cursor is right after an English letter or a half-width digit,
+/// where punctuation is typed in half-width, like "hello," and "3.5".
+- (BOOL)_isAfterHalfWidthAlphanumeric
+{
+    if (!Preferences.halfWidthPunctuationAfterEnglish || _inputMode != InputModeBopomofo || !_bpmfReadingBuffer->isEmpty()) {
+        return NO;
+    }
+    size_t cursor = _grid->cursor();
+    return cursor > 0 && IsHalfWidthAlphanumericReading(_grid->readings()[cursor - 1]);
 }
 
 /// After "=" is typed at the end of an arithmetic expression, such as
@@ -910,6 +1030,7 @@ static const size_t kLearnPhraseThreshold = 2;
             // A space after digits only leaves the English mode, so that a
             // number can be followed by Chinese, like "2026年".
             if (!_smartEnglishDigitsOnly) {
+                [self _fixCaseOfEnglishWordBeforeCursor];
                 [self _insertLiteralText:@" "];
             }
             [self _setSmartEnglishMode:NO];
@@ -1054,6 +1175,7 @@ static const size_t kLearnPhraseThreshold = 2;
                 if (charCode == 32 || charCode == 13) {
                     [self _insertLiteralText:[NSString stringWithUTF8String:keys.c_str()]];
                     if (charCode == 32) {
+                        [self _fixCaseOfEnglishWordBeforeCursor];
                         [self _insertLiteralText:@" "];
                         stateCallback([self buildInputtingState]);
                         return YES;
@@ -1081,6 +1203,7 @@ static const size_t kLearnPhraseThreshold = 2;
             return YES;
         }
 
+        [self _insertAutoSpaceIfNeededBeforeEnglish:NO];
         _grid->insertReading(reading);
         [self _walk];
 
@@ -1353,7 +1476,7 @@ static const size_t kLearnPhraseThreshold = 2;
     std::string punctuationNamePrefix;
     if (input.isControlHold) {
         punctuationNamePrefix = "_ctrl_punctuation_";
-    } else if (Preferences.halfWidthPunctuationEnabled) {
+    } else if (Preferences.halfWidthPunctuationEnabled || [self _isAfterHalfWidthAlphanumeric]) {
         punctuationNamePrefix = "_half_punctuation_";
     } else {
         punctuationNamePrefix = "_punctuation_";
@@ -1396,7 +1519,7 @@ static const size_t kLearnPhraseThreshold = 2;
     // A symbol key without a punctuation, such as "/" in the Hsu layout, puts
     // the symbol itself, so that an expression like 10／2＝ can be typed.
     if (_inputMode == InputModeBopomofo && _bpmfReadingBuffer->isEmpty() && charCode > 0x20 && charCode < 0x7f && !isalnum(charCode) && !input.isControlHold && !input.isCommandHold && !input.isOptionHold && ([state isKindOfClass:[InputStateNotEmpty class]] || [state isKindOfClass:[InputStateEmpty class]])) {
-        UniChar symbol = Preferences.halfWidthPunctuationEnabled ? charCode : (UniChar)(charCode + 0xfee0);
+        UniChar symbol = (Preferences.halfWidthPunctuationEnabled || [self _isAfterHalfWidthAlphanumeric]) ? charCode : (UniChar)(charCode + 0xfee0);
         [self _insertLiteralText:[NSString stringWithCharacters:&symbol length:1]];
         stateCallback([self buildInputtingState]);
         [self _appendArithmeticResultAfterKey:charCode stateCallback:stateCallback];
@@ -1686,7 +1809,11 @@ static const size_t kLearnPhraseThreshold = 2;
         _bpmfReadingBuffer->clear();
     } else if (_bpmfReadingBuffer->isEmpty()) {
         if (_grid->cursor()) {
+            BOOL deletingEnglish = IsEnglishReading(_grid->readings()[_grid->cursor() - 1]);
             _grid->deleteReadingBeforeCursor();
+            if (deletingEnglish) {
+                [self _removeAutoSpaceAfterDeletingEnglish];
+            }
             [self _walk];
         } else {
             errorCallback();

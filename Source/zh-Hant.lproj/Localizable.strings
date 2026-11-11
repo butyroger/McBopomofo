@@ -282,3 +282,14 @@
 "Full/Half-Width" = "全／半形模式圖示";
 "Quick Numbers" = "數字快打";
 "User Guide" = "使用說明";
+"Mixed Chinese and English:" = "中英混打：";
+"Add a space between Chinese and English" = "中英文之間自動加空格";
+"Half-width punctuation after English and digits" = "英文、數字後的標點用半形";
+"Fix the case of words like iPhone upon a space" = "按空白時修正英文大小寫（如 iPhone）";
+"Secure Input Reminder:" = "安全輸入提醒：";
+"Tell me which app makes the input method unavailable" = "輸入法被停用時告訴我是哪個程式造成的";
+"Secure Input Is On" = "「安全輸入」未解除";
+"Don't Remind Me Again" = "不再提醒";
+"The app that turned on Secure Input (PID %d) has quit, but macOS has not turned it off. Third-party input methods, including McBopomofo, cannot be used until then.\n\nPlease log out and log in again." = "開啟「安全輸入」的程式（PID %d）已經結束，但 macOS 沒有解除。解除前包括小麥注音在內的第三方輸入法都無法使用。\n\n請登出再登入。";
+"macOS reports that the login window has turned on Secure Input, which usually comes from a password manager or a password field in a browser. Third-party input methods, including McBopomofo, cannot be used while it is on.\n\nPlease try:\n1. Quit the password manager, such as 1Password, completely.\n2. Close the pages or windows waiting for a password.\n3. Lock the screen and unlock it with your password.\n4. Log out and log in again." = "macOS 回報是登入視窗開啟了「安全輸入」，通常來自密碼管理程式或瀏覽器的密碼欄位。開啟期間包括小麥注音在內的第三方輸入法都無法使用。\n\n請依序試試：\n1. 完全結束密碼管理程式（如 1Password）\n2. 關閉等待輸入密碼的網頁或視窗\n3. 鎖定螢幕，再用密碼解鎖\n4. 登出再登入";
+"\"%@\" (PID %d) has turned on Secure Input for more than a minute and a half. Third-party input methods, including McBopomofo, cannot be used while it is on.\n\nIf McBopomofo is gray in the input menu, please try:\n1. Close the pages or windows in the app waiting for a password.\n2. Quit the app completely and open it again.\n3. For a terminal, turn off \"Secure Keyboard Entry\".\n4. Lock the screen and unlock it, or log out and log in again.\n\nThe app name reported by macOS may not be accurate." = "「%@」（PID %d）開啟「安全輸入」已超過一分半鐘，開啟期間包括小麥注音在內的第三方輸入法都無法使用。\n\n如果輸入法選單裡的小麥注音變灰，請依序試試：\n1. 關閉該程式中等待輸入密碼的頁面或視窗\n2. 完全結束該程式再重新打開\n3. 若是終端機，取消「安全鍵盤輸入」\n4. 鎖定螢幕再解鎖，或登出再登入\n\n（macOS 回報的程式名稱不一定準確）";

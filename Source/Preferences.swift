@@ -38,6 +38,10 @@ private let kUseHorizontalCandidateListPreferenceKey = "UseHorizontalCandidateLi
 private let kCandidatePanelThemeKey = "CandidatePanelTheme"
 private let kChineseEnglishSwitchReminderEnabledKey = "ChineseEnglishSwitchReminderEnabled"
 private let kSmartChineseEnglishSwitchEnabledKey = "SmartChineseEnglishSwitchEnabled"
+private let kAutoSpaceBetweenChineseAndEnglishKey = "AutoSpaceBetweenChineseAndEnglish"
+private let kHalfWidthPunctuationAfterEnglishKey = "HalfWidthPunctuationAfterEnglish"
+private let kFixEnglishWordCaseKey = "FixEnglishWordCase"
+private let kSecureInputReminderEnabledKey = "SecureInputReminderEnabled"
 private let kShowChineseEnglishModeIconKey = "ShowChineseEnglishModeIcon"
 private let kShowFullHalfWidthModeIconKey = "ShowFullHalfWidthModeIcon"
 private let kChooseCandidateUsingSpaceKey = "ChooseCandidateUsingSpaceKey"
@@ -234,6 +238,10 @@ class Preferences: NSObject {
             kCandidatePanelThemeKey,
             kChineseEnglishSwitchReminderEnabledKey,
             kSmartChineseEnglishSwitchEnabledKey,
+            kAutoSpaceBetweenChineseAndEnglishKey,
+            kHalfWidthPunctuationAfterEnglishKey,
+            kFixEnglishWordCaseKey,
+            kSecureInputReminderEnabledKey,
             kShowChineseEnglishModeIconKey,
             kShowFullHalfWidthModeIconKey,
             kChooseCandidateUsingSpaceKey,
@@ -336,6 +344,25 @@ class Preferences: NSObject {
     /// a space, a symbol or Backspace.
     @UserDefault(key: kSmartChineseEnglishSwitchEnabledKey, defaultValue: true)
     @objc static var smartChineseEnglishSwitchEnabled: Bool
+
+    /// Adds a space between Chinese and English words in the composing
+    /// buffer, like "你好 hello".
+    @UserDefault(key: kAutoSpaceBetweenChineseAndEnglishKey, defaultValue: true)
+    @objc static var autoSpaceBetweenChineseAndEnglish: Bool
+
+    /// Types half-width punctuation right after English letters or digits,
+    /// like "hello," and "3.5", and full-width punctuation after Chinese.
+    @UserDefault(key: kHalfWidthPunctuationAfterEnglishKey, defaultValue: true)
+    @objc static var halfWidthPunctuationAfterEnglish: Bool
+
+    /// Fixes the case of a word like "iphone" to "iPhone" upon a space.
+    @UserDefault(key: kFixEnglishWordCaseKey, defaultValue: true)
+    @objc static var fixEnglishWordCase: Bool
+
+    /// Tells the user which app has turned on Secure Input for a while, which
+    /// makes macOS disable third-party input methods.
+    @UserDefault(key: kSecureInputReminderEnabledKey, defaultValue: true)
+    @objc static var secureInputReminderEnabled: Bool
 
     /// Shows "中" or "英" in the menu bar.
     @UserDefault(key: kShowChineseEnglishModeIconKey, defaultValue: true)
@@ -693,6 +720,12 @@ extension Preferences {
         )
         lines.append(
             "  - Smart Chinese/English Switch: \(Preferences.smartChineseEnglishSwitchEnabled ? "Enabled" : "Disabled")"
+        )
+        lines.append(
+            "  - Mixed Chinese and English: Auto Space \(Preferences.autoSpaceBetweenChineseAndEnglish ? "On" : "Off"), Half-Width Punctuation after English \(Preferences.halfWidthPunctuationAfterEnglish ? "On" : "Off"), Fix Word Case \(Preferences.fixEnglishWordCase ? "On" : "Off")"
+        )
+        lines.append(
+            "  - Secure Input Reminder: \(Preferences.secureInputReminderEnabled ? "Enabled" : "Disabled")"
         )
         lines.append(
             "  - Mode Icons: Chinese/English \(Preferences.showChineseEnglishModeIcon ? "Shown" : "Hidden"), Full/Half-width \(Preferences.showFullHalfWidthModeIcon ? "Shown" : "Hidden")"

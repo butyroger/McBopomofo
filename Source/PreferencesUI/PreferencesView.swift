@@ -517,6 +517,26 @@ private struct BasicPreferencesView: View {
                     isOn: $preferences.smartChineseEnglishSwitchEnabled)
             }
 
+            PreferenceRow(localized("Mixed Chinese and English:")) {
+                VStack(alignment: .leading) {
+                    Toggle(
+                        localized("Add a space between Chinese and English"),
+                        isOn: $preferences.autoSpaceBetweenChineseAndEnglish)
+                    Toggle(
+                        localized("Half-width punctuation after English and digits"),
+                        isOn: $preferences.halfWidthPunctuationAfterEnglish)
+                    Toggle(
+                        localized("Fix the case of words like iPhone upon a space"),
+                        isOn: $preferences.fixEnglishWordCase)
+                }
+            }
+
+            PreferenceRow(localized("Secure Input Reminder:")) {
+                Toggle(
+                    localized("Tell me which app makes the input method unavailable"),
+                    isOn: $preferences.secureInputReminderEnabled)
+            }
+
             PreferenceRow(localized("Mode Icons:")) {
                 HStack {
                     Toggle(

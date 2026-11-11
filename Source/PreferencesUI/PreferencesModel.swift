@@ -145,6 +145,38 @@ final class PreferencesViewModel: NSObject, ObservableObject {
         }
     }
 
+    var autoSpaceBetweenChineseAndEnglish: Bool {
+        get { Preferences.autoSpaceBetweenChineseAndEnglish }
+        set {
+            objectWillChange.send()
+            Preferences.autoSpaceBetweenChineseAndEnglish = newValue
+        }
+    }
+
+    var halfWidthPunctuationAfterEnglish: Bool {
+        get { Preferences.halfWidthPunctuationAfterEnglish }
+        set {
+            objectWillChange.send()
+            Preferences.halfWidthPunctuationAfterEnglish = newValue
+        }
+    }
+
+    var fixEnglishWordCase: Bool {
+        get { Preferences.fixEnglishWordCase }
+        set {
+            objectWillChange.send()
+            Preferences.fixEnglishWordCase = newValue
+        }
+    }
+
+    var secureInputReminderEnabled: Bool {
+        get { Preferences.secureInputReminderEnabled }
+        set {
+            objectWillChange.send()
+            Preferences.secureInputReminderEnabled = newValue
+        }
+    }
+
     var showChineseEnglishModeIcon: Bool {
         get { Preferences.showChineseEnglishModeIcon }
         set {
