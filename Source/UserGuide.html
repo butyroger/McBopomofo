@@ -131,6 +131,7 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
 <ul>
   <li>按 <kbd>空白</kbd>、任何符號或 <kbd>Backspace</kbd> 就回到中文。</li>
   <li>只打了數字時，空白只會回到中文、不插入空白，所以 <code>2026</code> 空白 <code>年</code> 會是「2026年」。</li>
+  <li>英文打完也可以不按空白，直接接著打中文：打完一個字的注音和聲調，就會自動轉回中文，例如 <code>hello</code> 接 <code>ㄏㄠˇ</code> → 「hello 好」、<code>PDF</code> 接 <code>ㄉㄤˇ</code> → 「PDF 檔」。前面要是英文單字（或 PDF 這類大寫縮寫），而且整串不是英文單字或單字的開頭，才會轉換。</li>
   <li>英文和中文一起留在組字區，按 <kbd>Enter</kbd> 一起送出。</li>
 </ul>
 <p class="note">很短的英文可能剛好是合法注音，例如許氏鍵盤的 <code>a</code> 加空白會打成「疵」，這時請改用 <kbd>Shift</kbd> 或 <kbd>Caps Lock</kbd>。本功能可在偏好設定關閉。</p>

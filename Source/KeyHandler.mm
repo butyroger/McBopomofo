@@ -824,6 +824,94 @@ static const size_t kLearnPhraseThreshold = 2;
     return YES;
 }
 
+/// In the English mode, when the key ends a Bopomofo syllable typed right
+/// after an English word, like "hello" and then ㄏㄠˇ ("hwf" in Hsu), turns
+/// the keys of the syllable back into Chinese, so that Chinese can follow
+/// English without a space. The key is a tone key, or a space for the first
+/// tone. Nothing is changed if the letters may still be an English word.
+- (BOOL)_convertTrailingEnglishToChineseWithKey:(UniChar)key stateCallback:(void (^)(InputState *))stateCallback
+{
+    if (key >= 0x80) {
+        return NO;
+    }
+    const std::string literal = McBopomofo::McBopomofoLM::kLiteralKeyPrefix;
+    const auto &readings = _grid->readings();
+    size_t cursor = _grid->cursor();
+    size_t start = cursor;
+    while (start > 0) {
+        const std::string &reading = readings[start - 1];
+        if (reading.size() != literal.size() + 1 || reading.rfind(literal, 0) != 0 || !isalpha((unsigned char)reading.back())) {
+            break;
+        }
+        start--;
+    }
+    std::string run;
+    for (size_t i = start; i < cursor; i++) {
+        run += readings[i].back();
+    }
+    BOOL isSpace = key == ' ';
+    // With a letter key, the whole letters may still be an English word being
+    // typed, like "helpf" for helpful.
+    if (isSpace) {
+        if ([EnglishWords isWord:[NSString stringWithUTF8String:run.c_str()]]) {
+            return NO;
+        }
+    } else if (isalpha(key) && [EnglishWords isWordOrPrefix:[NSString stringWithUTF8String:(run + std::string(1, (char)key)).c_str()]]) {
+        return NO;
+    }
+
+    // A syllable has 3 keys at most, plus the tone key.
+    for (size_t count = std::min<size_t>(3, run.size()); count >= 1; count--) {
+        std::string prefix = run.substr(0, run.size() - count);
+        if (prefix.size() < 2) {
+            continue;
+        }
+        std::string keys = run.substr(run.size() - count);
+        Formosa::Mandarin::BopomofoReadingBuffer buffer(_bpmfReadingBuffer->keyboardLayout());
+        BOOL valid = YES;
+        for (char k : keys) {
+            if (!buffer.isValidKey(k)) {
+                valid = NO;
+                break;
+            }
+            buffer.combineKey(k);
+        }
+        // The keys have to be exactly how the syllable is typed, without a
+        // tone, so "one" in "hellone" is not ㄋㄧㄡ (typed "neo" in Hsu), and
+        // "ne" (ㄋㄧ) is taken instead.
+        if (!valid || buffer.isEmpty() || buffer.hasToneMarker() || buffer.keyboardLayout()->keySequenceFromSyllable(buffer.syllable()) != keys) {
+            continue;
+        }
+        if (!isSpace) {
+            if (!buffer.isValidKey((char)key)) {
+                continue;
+            }
+            buffer.combineKey((char)key);
+            if (!buffer.hasToneMarker() || buffer.hasToneMarkerOnly()) {
+                continue;
+            }
+        }
+        std::string reading = buffer.syllable().composedString();
+        if (!_languageModel->hasUnigrams(reading)) {
+            continue;
+        }
+        if (![EnglishWords isWord:[NSString stringWithUTF8String:prefix.c_str()]]) {
+            continue;
+        }
+        for (size_t i = 0; i < count; i++) {
+            _grid->deleteReadingBeforeCursor();
+        }
+        [self _setSmartEnglishMode:NO];
+        [self _fixCaseOfEnglishWordBeforeCursor];
+        [self _insertAutoSpaceIfNeededBeforeEnglish:NO];
+        _grid->insertReading(reading);
+        [self _walk];
+        stateCallback([self buildInputtingState]);
+        return YES;
+    }
+    return NO;
+}
+
 /// Turns the unfinished reading into English and starts the English mode
 /// with the text.
 - (void)_switchToSmartEnglishWithText:(const std::string &)text
@@ -1026,6 +1114,9 @@ static const size_t kLearnPhraseThreshold = 2;
     // MARK: Smart Chinese/English Switching
     BOOL smartSwitching = [self _isSmartSwitchingAvailableForInput:input];
     if (smartSwitching && _smartEnglishMode) {
+        if (!_smartEnglishDigitsOnly && [self _convertTrailingEnglishToChineseWithKey:charCode stateCallback:stateCallback]) {
+            return YES;
+        }
         if (charCode == 32) {
             // A space after digits only leaves the English mode, so that a
             // number can be followed by Chinese, like "2026年".

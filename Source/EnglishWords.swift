@@ -141,6 +141,51 @@ import AppKit
         return wellKnownMixedCaseWords[word]
     }
 
+    /// Whether the text is an English word: a word in the dictionary, a word
+    /// typed twice or more, a well-known word, or an abbreviation in uppercase,
+    /// like PDF and ChatGPT. Letters typed after an abbreviation, like
+    /// "PDFdkf", are not a word.
+    @objc static func isWord(_ word: String) -> Bool {
+        guard word.count >= 2, word.allSatisfy({ $0.isASCII && $0.isLetter }) else {
+            return false
+        }
+        let trailingUppercase = word.reversed().prefix(while: \.isUppercase).count
+        if trailingUppercase == word.count || trailingUppercase >= 2 {
+            return true
+        }
+        let lowercased = word.lowercased()
+        if wellKnownMixedCaseWords[lowercased] != nil {
+            return true
+        }
+        loadIfNeeded()
+        if counts.contains(where: { $0.value >= 2 && $0.key.lowercased() == lowercased }) {
+            return true
+        }
+        let range = NSSpellChecker.shared.checkSpelling(
+            of: lowercased, startingAt: 0, language: "en", wrap: false,
+            inSpellDocumentWithTag: 0, wordCount: nil)
+        return range.location == NSNotFound
+    }
+
+    /// Whether the text is an English word, or the beginning of one, such as
+    /// "helpf" for helpful.
+    @objc static func isWordOrPrefix(_ text: String) -> Bool {
+        if isWord(text) {
+            return true
+        }
+        let lowercased = text.lowercased()
+        loadIfNeeded()
+        if counts.contains(where: { $0.value >= 2 && $0.key.lowercased().hasPrefix(lowercased) }) {
+            return true
+        }
+        let range = NSRange(location: 0, length: (lowercased as NSString).length)
+        let completions =
+            NSSpellChecker.shared.completions(
+                forPartialWordRange: range, in: lowercased, language: "en",
+                inSpellDocumentWithTag: 0) ?? []
+        return completions.contains { $0.lowercased().hasPrefix(lowercased) && $0.count > lowercased.count }
+    }
+
     private static func isSubsequence(_ letters: String, of word: String) -> Bool {
         var iterator = word.makeIterator()
         for letter in letters {
