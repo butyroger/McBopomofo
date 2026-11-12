@@ -75,6 +75,15 @@ class KeyHandlerInput: NSObject {
         inputTextIgnoringModifiers = event.charactersIgnoringModifiers
         keyCode = event.keyCode
         flags = event.modifierFlags
+        // The keypad Enter key sends ETX (0x03) with the numeric pad flag,
+        // while most of the key handler only checks for a carriage return.
+        // Treat it exactly like the Return key.
+        let isKeypadEnter = event.keyCode == KeyCode.enter.rawValue
+        if isKeypadEnter {
+            inputText = "\r"
+            inputTextIgnoringModifiers = "\r"
+            flags.remove(.numericPad)
+        }
         capsLockOn = KeyHandlerInput.isCapsLockOn(
             characters: event.characters, flags: event.modifierFlags)
         useVerticalMode = isVerticalMode
@@ -85,8 +94,8 @@ class KeyHandlerInput: NSObject {
             let first = inputText[inputText.startIndex].utf16.first!
             return first
         }()
-        self.charCode = charCode
-        emacsKey = EmacsKeyHelper.detect(charCode: charCode, flags: event.modifierFlags)
+        self.charCode = isKeypadEnter ? 13 : charCode
+        emacsKey = EmacsKeyHelper.detect(charCode: self.charCode, flags: flags)
         cursorForwardKey = useVerticalMode ? .down : .right
         cursorBackwardKey = useVerticalMode ? .up : .left
         extraChooseCandidateKey = useVerticalMode ? .left : .down
