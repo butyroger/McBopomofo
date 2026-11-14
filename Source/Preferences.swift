@@ -50,6 +50,7 @@ private let kChooseCandidateUsingSpaceKey = "ChooseCandidateUsingSpaceKey"
 private let kChineseConversionEnabledKey = "ChineseConversionEnabled"
 private let kHalfWidthPunctuationEnabledKey = "HalfWidthPunctuationEnable"
 private let kEscToCleanInputBufferKey = "EscToCleanInputBuffer"
+private let kEscTrimsMistypedTextKey = "EscTrimsMistypedText"
 private let kKeepReadingUponCompositionError = "KeepReadingUponCompositionError"
 
 private let kCandidateTextFontName = "CandidateTextFontName"
@@ -252,6 +253,7 @@ class Preferences: NSObject {
             kChineseConversionEnabledKey,
             kHalfWidthPunctuationEnabledKey,
             kEscToCleanInputBufferKey,
+            kEscTrimsMistypedTextKey,
             kKeepReadingUponCompositionError,
             kCandidateTextFontName,
             kCandidateKeyLabelFontName,
@@ -408,6 +410,12 @@ class Preferences: NSObject {
 
     @UserDefault(key: kEscToCleanInputBufferKey, defaultValue: false)
     @objc static var escToCleanInputBuffer: Bool
+
+    /// Esc removes only what was typed by mistake at the end, keeping the
+    /// last Chinese character or English word; pressing Esc twice clears the
+    /// whole composing buffer.
+    @UserDefault(key: kEscTrimsMistypedTextKey, defaultValue: true)
+    @objc static var escTrimsMistypedText: Bool
 
     @UserDefault(key: kKeepReadingUponCompositionError, defaultValue: false)
     @objc static var keepReadingUponCompositionError: Bool
@@ -732,6 +740,9 @@ extension Preferences {
         )
         lines.append(
             "  - Chinese/English Switch Reminder: \(Preferences.chineseEnglishSwitchReminderEnabled ? "Enabled" : "Disabled")"
+        )
+        lines.append(
+            "  - Esc Trims Mistyped Text: \(Preferences.escTrimsMistypedText ? "Enabled" : "Disabled")"
         )
         lines.append(
             "  - Smart Chinese/English Switch: \(Preferences.smartChineseEnglishSwitchEnabled ? "Enabled" : "Disabled")"

@@ -342,3 +342,6 @@
 "Floating Composition Window for This App" = "Floating Composition Window for This App";
 "Floating composition window on for %@" = "Floating composition window on for %@";
 "Floating composition window off for %@" = "Floating composition window off for %@";
+
+"ESC key removes only mistyped text at the end" = "ESC key removes only mistyped text at the end (press twice to clear all)";
+"Press Esc again to clear all" = "Press Esc again to clear all";

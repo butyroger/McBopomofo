@@ -567,9 +567,15 @@ private struct BasicPreferencesView: View {
             }
 
             PreferenceRow(localized("ESC Key:")) {
-                Toggle(
-                    localized("ESC key clears entire input buffer"),
-                    isOn: $preferences.escToCleanInputBuffer)
+                VStack(alignment: .leading) {
+                    Toggle(
+                        localized("ESC key removes only mistyped text at the end"),
+                        isOn: $preferences.escTrimsMistypedText)
+                    Toggle(
+                        localized("ESC key clears entire input buffer"),
+                        isOn: $preferences.escToCleanInputBuffer)
+                    .disabled(preferences.escTrimsMistypedText)
+                }
             }
 
             Divider()

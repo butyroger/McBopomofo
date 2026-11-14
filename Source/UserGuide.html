@@ -83,6 +83,7 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
 <nav>
   <h2>目錄</h2>
   <a href="#basic">基本操作</a>
+  <a href="#esc">Esc 清除亂碼</a>
   <a href="#smart-switch">智慧中英切換</a>
   <a href="#mixed">中英混打細節</a>
   <a href="#english">英文聯想</a>
@@ -112,7 +113,28 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
   <li>輸入法選單最上方可以直接切換「注音－標準鍵盤」與「注音－許氏鍵盤」。</li>
   <li>許氏鍵盤的數字鍵不是注音，打中文時直接按數字，數字會跟中文一起留在組字區。</li>
   <li><kbd>Caps Lock</kbd> 打開時打出的是小寫英文，關掉回到注音。</li>
+  <li>打錯字時按 <kbd>Esc</kbd>：只清掉字尾打錯的亂碼，見下方「<a href="#esc">Esc 清除亂碼</a>」。</li>
 </ul>
+</section>
+
+<section id="esc">
+<h2>Esc 清除亂碼</h2>
+<p>打太快難免會打出一串不是中文、也不是英文的字。按一下 <kbd>Esc</kbd> 只會清掉字尾的亂碼，保留到最後一個完整的中文字或英文單字，不用再一個一個按 Backspace。</p>
+<div class="examples">
+  <div class="example"><span class="in">今天開會 jqvx</span><span class="out">今天開會</span></div>
+  <div class="example"><span class="in">寄給 email 了 ;/z</span><span class="out">寄給 email 了</span></div>
+  <div class="example"><span class="in">hellojkq</span><span class="out">hello</span></div>
+  <div class="example"><span class="in">下午 3 點 ㄒㄧ</span><span class="out">下午 3 點</span></div>
+</div>
+<ul>
+  <li>會清掉的：還沒打完的注音、不成單字的英文字母、字尾的符號和空白。</li>
+  <li>會保留的：中文字、英文單字（拼字檢查認得或打過的字）、數字。</li>
+  <li>英文字母前段是單字時保留單字，例如 <code>hellojkq</code> 留下 <code>hello</code>。</li>
+  <li>清完後組字區下方會提示「再按一次 Esc 清除全部」；<b>連按兩下 <kbd>Esc</kbd></b> 清除整個組字區。</li>
+  <li>字尾沒有亂碼時，第一下只會顯示提示，不會清掉任何字，避免誤刪整句。</li>
+  <li>游標不在最後面時，清的是游標前面的亂碼。</li>
+</ul>
+<p class="note">本功能預設開啟，可在偏好設定「ESC 鍵」關閉，回到原本的行為。</p>
 </section>
 
 <section id="smart-switch">
@@ -309,6 +331,7 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
 <h2>偏好設定</h2>
 <p>從輸入法選單「小麥注音偏好設定」開啟。本版新增的項目：</p>
 <ul>
+  <li><b>ESC 鍵</b>：按一下只清除字尾打錯的亂碼、連按兩下清除全部（預設開）。</li>
   <li><b>面板主題</b>：候選字面板與符號表跟隨系統、淺色或深色。</li>
   <li><b>中英切換提醒</b>：開啟／關閉。</li>
   <li><b>智慧中英切換</b>：不按 Shift、Caps Lock 也能打英文。</li>
@@ -342,7 +365,8 @@ code { font: 14px ui-monospace, Menlo, monospace; background: var(--key-bg); pad
   <li><kbd>Shift</kbd> + 字母：直接打英文。</li>
   <li><kbd>Ctrl</kbd> <kbd>⌘</kbd> <kbd>G</kbd>：輸出簡體中文。</li>
   <li><kbd>Ctrl</kbd> <kbd>⌘</kbd> <kbd>H</kbd>：切換半形標點。</li>
-  <li><kbd>Esc</kbd>：清除組字區或關閉候選字。</li>
+  <li><kbd>Esc</kbd>：清除字尾打錯的亂碼，保留最後一個完整的中文或英文字；候選字視窗開著時關閉視窗。</li>
+  <li><kbd>Esc</kbd> <kbd>Esc</kbd>（連按兩下）：清除整個組字區。</li>
 </ul>
 </section>
 </main>

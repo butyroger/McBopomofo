@@ -121,6 +121,10 @@ static bool IsChineseReading(const std::string &reading)
     BOOL _smartEnglishMode;
     BOOL _smartEnglishDigitsOnly;
 
+    // Whether the last key handled was Esc that trimmed the composing buffer,
+    // so that another Esc right after it clears everything.
+    BOOL _lastKeyWasTrimmingEsc;
+
     // Phrases picked in this composition, as "value reading", which have
     // just become temporary phrases and are not typed again yet.
     NSMutableSet<NSString *> *_phrasesPickedInComposition;
@@ -981,6 +985,8 @@ static const size_t kLearnPhraseThreshold = 2;
 {
     InputState *state = inState;
     UniChar charCode = input.charCode;
+    BOOL escPressedTwice = _lastKeyWasTrimmingEsc && charCode == 27;
+    _lastKeyWasTrimmingEsc = NO;
     McBopomofoEmacsKey emacsKey = input.emacsKey;
 
     // MARK: Handle Selecting Feature
@@ -1432,7 +1438,7 @@ static const size_t kLearnPhraseThreshold = 2;
 
     // MARK: Esc
     if (charCode == 27) {
-        return [self _handleEscWithState:state stateCallback:stateCallback errorCallback:errorCallback];
+        return [self _handleEscWithState:state pressedTwice:escPressedTwice stateCallback:stateCallback errorCallback:errorCallback];
     }
 
     // MARK: Tab
@@ -1734,10 +1740,114 @@ static const size_t kLearnPhraseThreshold = 2;
     return YES;
 }
 
-- (BOOL)_handleEscWithState:(InputState *)state stateCallback:(void (^)(InputState *))stateCallback errorCallback:(void (^)(void))errorCallback
+/// Removes what was typed by mistake before the cursor: an unfinished
+/// Bopomofo reading, and the letters, symbols and spaces after the last
+/// Chinese character or English word. Letters that start with an English
+/// word, like "hello" in "hellojkq", keep the word. Returns NO if there is
+/// nothing to remove.
+- (BOOL)_trimMistypedTextBeforeCursor
+{
+    BOOL trimmed = NO;
+    if (!_bpmfReadingBuffer->isEmpty()) {
+        _bpmfReadingBuffer->clear();
+        _rawKeysOfReading.clear();
+        trimmed = YES;
+    }
+
+    const std::string literal = McBopomofo::McBopomofoLM::kLiteralKeyPrefix;
+    auto isLetter = [&](const std::string &reading) {
+        return reading.size() == literal.size() + 1 && reading.rfind(literal, 0) == 0 && isalpha((unsigned char)reading.back());
+    };
+    auto isDigit = [&](const std::string &reading) {
+        return IsHalfWidthAlphanumericReading(reading) && !IsEnglishReading(reading);
+    };
+
+    while (_grid->cursor() > 0) {
+        const auto &readings = _grid->readings();
+        size_t cursor = _grid->cursor();
+        const std::string &last = readings[cursor - 1];
+        // Chinese characters, English words picked from the completions and
+        // numbers are kept.
+        if (IsChineseReading(last) || (IsEnglishReading(last) && !isLetter(last)) || isDigit(last)) {
+            break;
+        }
+        if (!isLetter(last)) {
+            _grid->deleteReadingBeforeCursor();
+            trimmed = YES;
+            continue;
+        }
+
+        size_t start = cursor;
+        while (start > 0 && isLetter(readings[start - 1])) {
+            start--;
+        }
+        std::string run;
+        for (size_t i = start; i < cursor; i++) {
+            run += readings[i].back();
+        }
+        if ([EnglishWords isWord:@(run.c_str())]) {
+            break;
+        }
+        // Keep a word at the beginning, like "hello" in "hellojkq". Two
+        // letters are too often taken as a word, like "ls" in "lsqq".
+        size_t keep = 0;
+        for (size_t length = run.size() - 1; length >= 3; length--) {
+            if ([EnglishWords isWord:@(run.substr(0, length).c_str())]) {
+                keep = length;
+                break;
+            }
+        }
+        for (size_t i = keep; i < run.size(); i++) {
+            _grid->deleteReadingBeforeCursor();
+        }
+        trimmed = YES;
+        if (keep) {
+            break;
+        }
+    }
+
+    if (trimmed) {
+        size_t cursor = _grid->cursor();
+        BOOL endsWithLetter = cursor > 0 && isLetter(_grid->readings()[cursor - 1]);
+        if (!endsWithLetter) {
+            [self _setSmartEnglishMode:NO];
+        }
+        [self _walk];
+    }
+    return trimmed;
+}
+
+- (BOOL)_handleEscWithState:(InputState *)state pressedTwice:(BOOL)pressedTwice stateCallback:(void (^)(InputState *))stateCallback errorCallback:(void (^)(void))errorCallback
 {
     if (![state isKindOfClass:[InputStateInputting class]]) {
         return NO;
+    }
+
+    if (Preferences.escTrimsMistypedText) {
+        if (!pressedTwice && [self _trimMistypedTextBeforeCursor]) {
+            _lastKeyWasTrimmingEsc = YES;
+            if (_bpmfReadingBuffer->isEmpty() && !_grid->length()) {
+                stateCallback([[InputStateEmptyIgnoringPreviousState alloc] init]);
+            } else {
+                InputStateInputting *inputting = (InputStateInputting *)[self buildInputtingState];
+                if (inputting.tooltip.length == 0) {
+                    inputting.tooltip = NSLocalizedString(@"Press Esc again to clear all", @"");
+                }
+                stateCallback(inputting);
+            }
+            return YES;
+        }
+        if (!pressedTwice) {
+            // Nothing typed by mistake; the next Esc clears everything.
+            _lastKeyWasTrimmingEsc = YES;
+            InputStateInputting *inputting = (InputStateInputting *)[self buildInputtingState];
+            inputting.tooltip = NSLocalizedString(@"Press Esc again to clear all", @"");
+            stateCallback(inputting);
+            return YES;
+        }
+        [self clear];
+        stateCallback([[InputStateEmptyIgnoringPreviousState alloc] init]);
+        return YES;
     }
 
     BOOL escToClearInputBufferEnabled = Preferences.escToCleanInputBuffer;

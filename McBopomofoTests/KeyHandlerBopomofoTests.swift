@@ -1997,9 +1997,12 @@ class KeyHandlerBopomofoTests: XCTestCase {
 
     func testEscToClearReadingAndGoToEmpty() {
         let enabled = Preferences.escToCleanInputBuffer
+        let trims = Preferences.escTrimsMistypedText
         Preferences.escToCleanInputBuffer = false
+        Preferences.escTrimsMistypedText = false
         defer {
             Preferences.escToCleanInputBuffer = enabled
+            Preferences.escTrimsMistypedText = trims
         }
 
         var state: InputState = InputState.Empty()
@@ -2033,9 +2036,12 @@ class KeyHandlerBopomofoTests: XCTestCase {
 
     func testEscToClearReadingAndGoToInputting() {
         let enabled = Preferences.escToCleanInputBuffer
+        let trims = Preferences.escTrimsMistypedText
         Preferences.escToCleanInputBuffer = false
+        Preferences.escTrimsMistypedText = false
         defer {
             Preferences.escToCleanInputBuffer = enabled
+            Preferences.escTrimsMistypedText = trims
         }
 
         var state: InputState = InputState.Empty()
@@ -2073,9 +2079,12 @@ class KeyHandlerBopomofoTests: XCTestCase {
 
     func testEscToClearAll() {
         let enabled = Preferences.escToCleanInputBuffer
+        let trims = Preferences.escTrimsMistypedText
         Preferences.escToCleanInputBuffer = true
+        Preferences.escTrimsMistypedText = false
         defer {
             Preferences.escToCleanInputBuffer = enabled
+            Preferences.escTrimsMistypedText = trims
         }
 
         var state: InputState = InputState.Empty()

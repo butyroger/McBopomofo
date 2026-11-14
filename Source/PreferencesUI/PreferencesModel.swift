@@ -236,6 +236,14 @@ final class PreferencesViewModel: NSObject, ObservableObject {
         }
     }
 
+    var escTrimsMistypedText: Bool {
+        get { Preferences.escTrimsMistypedText }
+        set {
+            objectWillChange.send()
+            Preferences.escTrimsMistypedText = newValue
+        }
+    }
+
     var escToCleanInputBuffer: Bool {
         get { Preferences.escToCleanInputBuffer }
         set {

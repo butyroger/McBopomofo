@@ -340,3 +340,6 @@
 "Floating Composition Window for This App" = "此 App 使用浮動組字窗";
 "Floating composition window on for %@" = "「%@」已使用浮動組字窗";
 "Floating composition window off for %@" = "「%@」已停用浮動組字窗";
+
+"ESC key removes only mistyped text at the end" = "按 ESC 只清除字尾打錯的亂碼，保留最後一個完整的中文或英文字（連按兩下清除全部）";
+"Press Esc again to clear all" = "再按一次 Esc 清除全部";
