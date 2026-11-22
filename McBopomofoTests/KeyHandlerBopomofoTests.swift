@@ -438,8 +438,11 @@ class KeyHandlerBopomofoTests: XCTestCase {
     func testUppercaseLetterWhenEmpty1() {
         let current = Preferences.letterBehavior
         Preferences.letterBehavior = 0
+        let smartSwitch = Preferences.smartChineseEnglishSwitchEnabled
+        Preferences.smartChineseEnglishSwitchEnabled = false
         defer {
             Preferences.letterBehavior = current
+            Preferences.smartChineseEnglishSwitchEnabled = smartSwitch
         }
         let input = KeyHandlerInput(
             inputText: "A", keyCode: KeyCode.enter.rawValue, charCode: charCode("A"), flags: [],
@@ -479,8 +482,11 @@ class KeyHandlerBopomofoTests: XCTestCase {
     func testUppercaseLetterWhenNotEmpty1() {
         let current = Preferences.letterBehavior
         Preferences.letterBehavior = 0
+        let smartSwitch = Preferences.smartChineseEnglishSwitchEnabled
+        Preferences.smartChineseEnglishSwitchEnabled = false
         defer {
             Preferences.letterBehavior = current
+            Preferences.smartChineseEnglishSwitchEnabled = smartSwitch
         }
 
         var state: InputState = InputState.Empty()
@@ -658,9 +664,12 @@ class KeyHandlerBopomofoTests: XCTestCase {
             inputText: "`", keyCode: 0, charCode: charCode("`"), flags: .shift,
             isVerticalMode: false)
         var state: InputState = InputState.Empty()
-        handler.handle(input: input, state: state) { newState in
-            state = newState
-        } errorCallback: {
+        // ` opens the text templates, and ` again opens the symbol table.
+        for _ in 0..<2 {
+            handler.handle(input: input, state: state) { newState in
+                state = newState
+            } errorCallback: {
+            }
         }
 
         XCTAssertTrue(state is InputState.ChoosingCandidate, "\(state)")
@@ -672,9 +681,12 @@ class KeyHandlerBopomofoTests: XCTestCase {
     func testIgnorePunctuationTable() {
         let enabled = Preferences.halfWidthPunctuationEnabled
         Preferences.halfWidthPunctuationEnabled = false
+        let smartSwitch = Preferences.smartChineseEnglishSwitchEnabled
+        Preferences.smartChineseEnglishSwitchEnabled = false
 
         defer {
             Preferences.halfWidthPunctuationEnabled = enabled
+            Preferences.smartChineseEnglishSwitchEnabled = smartSwitch
         }
 
         var state: InputState = InputState.Empty()
@@ -812,9 +824,12 @@ class KeyHandlerBopomofoTests: XCTestCase {
         let keepReadingUponCompositionError = Preferences.keepReadingUponCompositionError
         Preferences.associatedPhrasesEnabled = false
         Preferences.keepReadingUponCompositionError = false
+        let smartSwitch = Preferences.smartChineseEnglishSwitchEnabled
+        Preferences.smartChineseEnglishSwitchEnabled = false
         defer {
             Preferences.associatedPhrasesEnabled = associatedPhrasesEnabled
             Preferences.keepReadingUponCompositionError = keepReadingUponCompositionError
+            Preferences.smartChineseEnglishSwitchEnabled = smartSwitch
         }
 
         var state: InputState = InputState.Empty()
@@ -3102,7 +3117,7 @@ extension KeyHandlerBopomofoTests {
         defer {
             Preferences.associatedPhrasesEnabled = asociatedPhrases
         }
-        // Type something in the buffer, then press ` to enter choosing punctuation list, then ESC to return to inputting state
+        // Type something in the buffer, then press ` to commit it and open the text templates, then ESC to close them
         var state: InputState = InputState.Empty()
 
         let keys = Array("su3cl3").map {
@@ -3123,11 +3138,16 @@ extension KeyHandlerBopomofoTests {
         let backtick = KeyHandlerInput(
             inputText: "`", keyCode: 0, charCode: charCode("`"), flags: .shift,
             isVerticalMode: false)
+        var committed: String?
         handler.handle(input: backtick, state: state) { newState in
+            if let committing = newState as? InputState.Committing {
+                committed = committing.poppedText
+            }
             state = newState
         } errorCallback: {
         }
-        XCTAssertTrue(state is InputState.ChoosingPunctuationList, "\(state)")
+        XCTAssertEqual(committed, "你好")
+        XCTAssertTrue(state is InputState.TextTemplate, "\(state)")
         // Press ESC
         let esc = KeyHandlerInput(
             inputText: " ", keyCode: 0, charCode: 27, flags: [], isVerticalMode: false)
@@ -3135,14 +3155,7 @@ extension KeyHandlerBopomofoTests {
             state = newState
         } errorCallback: {
         }
-        // Should return to inputting state with buffer preserved
-        XCTAssertTrue(
-            state is InputState.Inputting,
-            "\(state)"
-        )
-        if let inputting = state as? InputState.Inputting {
-            XCTAssertEqual(inputting.composingBuffer, "你好")
-        }
+        XCTAssertTrue(state is InputState.Empty, "\(state)")
     }
 
     func testBacktickKey() {
@@ -3155,7 +3168,10 @@ extension KeyHandlerBopomofoTests {
             state = newState
         } errorCallback: {
         }
-        XCTAssertTrue(state is InputState.ChoosingCandidate, "\(state)")
+        XCTAssertTrue(state is InputState.TextTemplate, "\(state)")
+        if let template = state as? InputState.TextTemplate {
+            XCTAssertEqual(template.code, "")
+        }
     }
 
     func testBacktickThenEsc() {
@@ -3169,10 +3185,7 @@ extension KeyHandlerBopomofoTests {
             state = newState
         } errorCallback: {
         }
-        XCTAssertTrue(
-            state is InputState.ChoosingPunctuationList,
-            "\(state)"
-        )
+        XCTAssertTrue(state is InputState.TextTemplate, "\(state)")
         let esc = KeyHandlerInput(
             inputText: " ", keyCode: 0, charCode: 27, flags: [],
             isVerticalMode: false)
@@ -3180,10 +3193,7 @@ extension KeyHandlerBopomofoTests {
             state = newState
         } errorCallback: {
         }
-        XCTAssertTrue(
-            state is InputState.EmptyIgnoringPreviousState,
-            "\(state)"
-        )
+        XCTAssertTrue(state is InputState.Empty, "\(state)")
     }
 
     func testBacktickThenBackspace() {
@@ -3196,10 +3206,7 @@ extension KeyHandlerBopomofoTests {
             state = newState
         } errorCallback: {
         }
-        XCTAssertTrue(
-            state is InputState.ChoosingPunctuationList,
-            "\(state)"
-        )
+        XCTAssertTrue(state is InputState.TextTemplate, "\(state)")
         let backspace = KeyHandlerInput(
             inputText: " ", keyCode: KeyCode.delete.rawValue, charCode: 0, flags: [],
             isVerticalMode: false)
@@ -3207,10 +3214,7 @@ extension KeyHandlerBopomofoTests {
             state = newState
         } errorCallback: {
         }
-        XCTAssertTrue(
-            state is InputState.EmptyIgnoringPreviousState,
-            "\(state)"
-        )
+        XCTAssertTrue(state is InputState.Empty, "\(state)")
     }
 
     func testBacktickThenBacktick() {
@@ -3230,8 +3234,8 @@ extension KeyHandlerBopomofoTests {
             state = newState
         } errorCallback: {
         }
-        // Should remain in candidate state or reset, depending on implementation
-        XCTAssertTrue(state is InputState.SelectingFeature, "\(state)")
+        // ` in the text templates opens the symbol table.
+        XCTAssertTrue(state is InputState.ChoosingPunctuationList, "\(state)")
     }
 
     func testBacktickThenPunctuation() {
@@ -3251,10 +3255,11 @@ extension KeyHandlerBopomofoTests {
             state = newState
         } errorCallback: {
         }
-        // Should either commit a punctuation or reset
-        XCTAssertTrue(
-            state is InputState.ChoosingCandidate || state is InputState.EmptyIgnoringPreviousState
-                || state is InputState.Inputting, "\(state)")
+        // The punctuation filters the text templates by code.
+        XCTAssertTrue(state is InputState.TextTemplate, "\(state)")
+        if let template = state as? InputState.TextTemplate {
+            XCTAssertEqual(template.code, "<")
+        }
     }
 
     func testDoubleBackquoteForceCommit() {
@@ -3279,18 +3284,10 @@ extension KeyHandlerBopomofoTests {
             XCTAssertEqual(inputting.composingBuffer, "你好")
         }
 
-        // First backquote: should not commit yet
+        // First backquote: commits the buffer and opens the text templates
         let backquote = KeyHandlerInput(
             inputText: "`", keyCode: 0, charCode: charCode("`"), flags: [], isVerticalMode: false)
-        handler.handle(input: backquote, state: state) { newState in
-            state = newState
-        } errorCallback: {
-        }
-        // Should still be inputting
-        XCTAssertTrue(state is InputState.ChoosingPunctuationList, "\(state)")
-
         var commiting: InputState.Committing?
-        // Second backquote: should force commit
         handler.handle(input: backquote, state: state) { newState in
             if let newState = newState as? InputState.Committing {
                 commiting = newState
@@ -3298,10 +3295,20 @@ extension KeyHandlerBopomofoTests {
             state = newState
         } errorCallback: {
         }
-        XCTAssertTrue(state is InputState.SelectingFeature, "\(state)")
+        XCTAssertTrue(state is InputState.TextTemplate, "\(state)")
         XCTAssertNotNil(commiting)
-        if let committing = state as? InputState.Committing {
-            XCTAssertEqual(committing.poppedText, "你好")
+        XCTAssertEqual(commiting?.poppedText, "你好")
+
+        // Second backquote: opens the symbol table without committing again
+        commiting = nil
+        handler.handle(input: backquote, state: state) { newState in
+            if let newState = newState as? InputState.Committing {
+                commiting = newState
+            }
+            state = newState
+        } errorCallback: {
         }
+        XCTAssertTrue(state is InputState.ChoosingPunctuationList, "\(state)")
+        XCTAssertNil(commiting)
     }
 }
