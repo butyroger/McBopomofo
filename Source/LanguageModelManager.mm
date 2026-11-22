@@ -529,8 +529,30 @@ static void LTLoadVariantAnnotatorData()
     return result;
 }
 
+// When the app hosts the unit tests, use an empty folder instead of the user's
+// data, so that the tests neither depend on what the user has learned nor
+// write to it.
+static NSString *LTITestDataFolderPath(void)
+{
+    static NSString *path;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        if (NSProcessInfo.processInfo.environment[@"XCTestConfigurationFilePath"] == nil) {
+            return;
+        }
+        NSString *folder = [NSString stringWithFormat:@"McBopomofoTests-%d", NSProcessInfo.processInfo.processIdentifier];
+        path = [NSTemporaryDirectory() stringByAppendingPathComponent:folder];
+        [[NSFileManager defaultManager] createDirectoryAtPath:path withIntermediateDirectories:YES attributes:nil error:NULL];
+    });
+    return path;
+}
+
 + (NSString *)dataFolderPath
 {
+    NSString *testPath = LTITestDataFolderPath();
+    if (testPath) {
+        return testPath;
+    }
     BOOL useCustomLocation = Preferences.useCustomUserPhraseLocation;
     if (!useCustomLocation) {
         return [UserPhraseLocationHelper defaultUserPhraseLocation];
