@@ -96,8 +96,15 @@ import Foundation
             start -= 1
         }
         // The longest expression that makes sense, such as 2+3 in "(2+3".
+        // A division by zero gives no result at all, so that "5/0+1" is not
+        // answered with the 1 at its end.
         for i in start..<characters.count {
-            if let value = Expression.evaluate(String(characters[i...])) {
+            var dividedByZero = false
+            let value = Expression.evaluate(String(characters[i...]), dividedByZero: &dividedByZero)
+            if dividedByZero {
+                return nil
+            }
+            if let value {
                 return formatted(value)
             }
         }
@@ -276,16 +283,23 @@ import Foundation
 private struct Expression {
     private let characters: [Character]
     private var index = 0
+    private var dividedByZero = false
 
     static func evaluate(_ text: String) -> Double? {
+        var dividedByZero = false
+        return evaluate(text, dividedByZero: &dividedByZero)
+    }
+
+    /// Sets `dividedByZero` when the text tries to divide by zero.
+    static func evaluate(_ text: String, dividedByZero: inout Bool) -> Double? {
         // At least one operator, or it is just a number.
         guard text.contains(where: { "+-*/".contains($0) }) else {
             return nil
         }
         var parser = Expression(characters: Array(text))
-        guard let value = parser.expression(), parser.index == parser.characters.count,
-            value.isFinite
-        else {
+        let value = parser.expression()
+        dividedByZero = parser.dividedByZero
+        guard let value, parser.index == parser.characters.count, value.isFinite else {
             return nil
         }
         return value
@@ -321,6 +335,7 @@ private struct Expression {
                 return nil
             }
             if op == "/" && rhs == 0 {
+                dividedByZero = true
                 return nil
             }
             value = op == "*" ? value * rhs : value / rhs
