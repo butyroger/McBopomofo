@@ -80,6 +80,32 @@ class KeyHandlerBopomofoTests: XCTestCase {
         handler.syncWithPreferences()
     }
 
+    func testLowercaseLetterOutsideHsuLayoutStartsEnglish() {
+        let smartSwitch = Preferences.smartChineseEnglishSwitchEnabled
+        Preferences.smartChineseEnglishSwitchEnabled = true
+        Preferences.keyboardLayout = .hsu
+        handler.syncWithPreferences()
+        defer {
+            Preferences.smartChineseEnglishSwitchEnabled = smartSwitch
+        }
+
+        var state: InputState = InputState.Empty()
+        for key in ["q", "u", "o"] {
+            let input = KeyHandlerInput(
+                inputText: key, keyCode: 0, charCode: charCode(key), flags: [],
+                isVerticalMode: false)
+            let handled = handler.handle(input: input, state: state) { newState in
+                state = newState
+            } errorCallback: {
+            }
+            XCTAssertTrue(handled, "\(key) should be handled")
+        }
+        XCTAssertTrue(state is InputState.Inputting, "\(state)")
+        if let state = state as? InputState.Inputting {
+            XCTAssertEqual(state.composingBuffer, "quo")
+        }
+    }
+
     func testIgnoreEmpty() {
         let input = KeyHandlerInput(
             inputText: "", keyCode: 0, charCode: 0, flags: [], isVerticalMode: false)

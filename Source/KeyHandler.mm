@@ -1206,6 +1206,14 @@ static const size_t kLearnPhraseThreshold = 2;
             return YES;
         }
 
+        // A lowercase letter that is not a key of the keyboard layout, like
+        // "q" in Hsu, starts English too, like "quote".
+        if (_bpmfReadingBuffer->isEmpty() && charCode >= 'a' && charCode <= 'z' && !_bpmfReadingBuffer->isValidKey((char)charCode)) {
+            [self _switchToSmartEnglishWithText:std::string(1, (char)charCode)];
+            stateCallback([self buildInputtingState]);
+            return YES;
+        }
+
         if (!_bpmfReadingBuffer->isEmpty() && charCode < 0x80 && isprint(charCode) && charCode != 32) {
             if (!skipBpmfHandling && _bpmfReadingBuffer->isValidKey((char)charCode)) {
                 // A key that replaces a part of the reading, like the second
