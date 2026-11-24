@@ -397,11 +397,6 @@ extension AppDelegate {
         open(userFileAt: LanguageModelManager.phraseReplacementDataPathMcBopomofo)
     }
 
-    @objc func openTextTemplates(_ sender: Any?) {
-        InputState.TextTemplate.createSampleFileIfNeeded()
-        open(userFileAt: LanguageModelManager.textTemplatesDataPath)
-    }
-
     @objc func openSymbolTable(_ sender: Any?) {
         let path = LanguageModelManager.symbolTableDataPath
         if !FileManager.default.fileExists(atPath: path) {

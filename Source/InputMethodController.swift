@@ -155,9 +155,6 @@ class McBopomofoInputMethodController: IMKInputController {
             withTitle: NSLocalizedString("Manage Vocabulary…", comment: ""),
             action: #selector(showVocabularyManager(_:)), keyEquivalent: "")
         menu.addItem(
-            withTitle: NSLocalizedString("Edit Text Templates", comment: ""),
-            action: #selector(openTextTemplates(_:)), keyEquivalent: "")
-        menu.addItem(
             withTitle: NSLocalizedString("Edit Symbol Table", comment: ""),
             action: #selector(openSymbolTable(_:)), keyEquivalent: "")
 
@@ -449,9 +446,6 @@ class McBopomofoInputMethodController: IMKInputController {
         (NSApp.delegate as? AppDelegate)?.openPhraseReplacementMcBopomofo(sender)
     }
 
-    @objc func openTextTemplates(_ sender: Any?) {
-        (NSApp.delegate as? AppDelegate)?.openTextTemplates(sender)
-    }
 
     @objc func openSymbolTable(_ sender: Any?) {
         (NSApp.delegate as? AppDelegate)?.openSymbolTable(sender)
