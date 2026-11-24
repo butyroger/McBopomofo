@@ -139,12 +139,7 @@ class McBopomofoInputMethodController: IMKInputController {
                 withTitle: NSLocalizedString("Edit Excluded Phrases", comment: ""),
                 action: #selector(openExcludedPhrasesPlainBopomofo(_:)), keyEquivalent: "")
         } else {
-            menu.addItem(
-                withTitle: NSLocalizedString("Edit User Phrases", comment: ""),
-                action: #selector(openUserPhrases(_:)), keyEquivalent: "")
-            menu.addItem(
-                withTitle: NSLocalizedString("Edit Excluded Phrases", comment: ""),
-                action: #selector(openExcludedPhrasesMcBopomofo(_:)), keyEquivalent: "")
+            // The user phrases and the excluded phrases are edited in the vocabulary manager.
             if optionKeyPressed {
                 menu.addItem(
                     withTitle: NSLocalizedString("Edit Phrase Replacement Table", comment: ""),
